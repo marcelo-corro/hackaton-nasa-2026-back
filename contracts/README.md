@@ -99,7 +99,9 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
 
 - `prob_foco`: probabilidad de al menos un foco en la comuna en el horizonte (0-1).
 - `percentil`: cómo se compara con la historia de esa comuna en esa época del año.
-- `nivel` (provisional): `bajo` | `medio` | `alto` | `muy_alto`.
+- `nivel`: `bajo` (< 4 %, cerca de la tasa base) | `medio` (4-12 %) | `alto` (12-30 %) | `muy_alto` (≥ 30 %), según
+  `prob_foco`. La probabilidad máxima es 0,95: el modelo nunca dice "seguro".
+- Mientras no haya focos de 2026 en tiempo casi real, `valido_para` es el día siguiente al último dato (2026-01-01).
 
 ## focos/{region_id}.csv
 

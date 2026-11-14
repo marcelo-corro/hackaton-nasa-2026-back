@@ -4,6 +4,18 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
 ## 2026-11-14
 
+- **Riesgo (A3), versión base:** comuna × día, objetivo = foco Suomi NPP al día siguiente. Entrena 2012-2019, calibra
+  2020-2021, prueba 2022-2025. Gradient boosting con variables FIRMS: AUC 0,827 (climatología 0,789, persistencia
+  0,811; regresión logística 0,832, prácticamente igual). El 10 % de mayor riesgo captura el 50 % de los días con
+  fuego. Alertas (≥ 12 %): aciertan 30 % donde ya hay fuego (base 16 %) y 14 % para incendios nuevos (base 2,4 %), pero
+  81 % de los incendios nuevos empieza sin alerta. Probabilidad topada en 95 %. Se parte sin clima ni vegetación para
+  medir cuánto aporta cada fuente al sumarla. Detalle: `docs/riesgo.md`.
+- **Eventos (A2):** la hipótesis de que contar incendios en vez de focos iguala los sensores se cumple solo en
+  parte: la razón Suomi NPP / MODIS baja de 3,2 a 2,3 (2013-2017) y queda entre 1,8 y 2,3 con cualquier
+  definición razonable. La diferencia es sobre todo sensibilidad: MODIS ve el 11 % de los incendios de un foco que ve
+  VIIRS y el 100 % de los de más de 50. La deriva de MODIS también se ve en incendios grandes (92 % → 78 % entre
+  2012-2020 y 2024-2025). Se mantiene la armonización por calibración; los eventos quedan como evidencia para el
+  pitch. Detalle: `docs/eventos.md`.
 - **Armonización (A1):** unidad "focos equivalentes MODIS". Regla por período: Terra convertido a Terra + Aqua
   hasta 2002-06; MODIS observado 2002-07 a 2017-12; VIIRS Suomi NPP convertido desde 2018-01 (MODIS cambia de
   procesamiento en 2018 y su órbita se desvía: cuenta 8-24 % menos de lo esperado). Se compararon 8 métodos fuera

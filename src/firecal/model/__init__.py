@@ -1,13 +1,13 @@
-"""Riesgo de focos a 24-48 h (pendiente).
+"""Riesgo de focos a 24-48 h por comuna (paso 8, `scripts/08_riesgo.py`). Resultados en docs/riesgo.md.
 
-Punto de partida: la prueba de Seba (Drive: informes/datos_8B/prediccion/prueba_prediccion.py),
-AUC 0,75 solo con historia y 0,81 con el clima real de mañana (optimista: pronóstico perfecto).
+Módulos:
+- `variables`: tabla comuna × día, objetivos (y24, y48) y bloques de variables (FIRMS, climatología, clima).
+- `evaluar`: AUC, precisión media, captura del 10 % de mayor riesgo, calibración y curva de captura.
 
-Plan:
-- Objetivo: al menos un foco VIIRS en la celda/comuna mañana.
-- Features: historia armonizada, focos en celdas vecinas, clima de hoy, pronóstico real,
-  NDVI, temperatura de superficie, cobertura de suelo.
-- Validación temporal (entrenar <= 2021, probar 2022-2025), métricas AUC, AP, captura en el top 10 %
-  y calibración de probabilidades.
-- Foco en propagación (donde el modelo acierta); declarar el límite en ignición.
+Decisiones (14-11-2026):
+- Objetivo: al menos un foco VIIRS Suomi NPP (`uso_base`) en la comuna al día siguiente (el sensor estable).
+- Partición temporal: entrena 2012-02..2019, calibra (isotónica, tope 95 %) 2020-2021, prueba 2022-2025.
+- La climatología (comuna × mes) se calcula solo con años de entrenamiento: sin fuga del período de prueba.
+- Se evalúa por separado propagación (comuna con focos en los últimos 3 días) e ignición (sin focos recientes).
+- Para sumar fuentes, se crea un bloque con llave (region_id, fecha) y el script lo agrega a la comparación.
 """
