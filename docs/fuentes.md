@@ -50,6 +50,37 @@ cómo se verificó y la cita que corresponde. Lo que no esté en esta lista no s
   https://doi.org/10.24381/CDS.E2161BAC
 - "Generated using Copernicus Climate Change Service information."
 
+## 2b. NASA POWER: clima diario por comuna (insumo del riesgo a 24-48 h)
+
+Se usa **en lugar de Open-Meteo** para las 345 comunas: el plan gratis de Open-Meteo agotó su cupo diario tras
+30 comunas (el rango 2012-2025 consume ~365 de un cupo de 10 000 por comuna y día).
+
+| Campo | Valor |
+|---|---|
+| Qué es | Reanálisis MERRA-2 y datos de la NASA, a escala diaria, vía la API de POWER |
+| URL | `https://power.larc.nasa.gov/api/temporal/daily/point` (`community=AG`, `format=JSON`) |
+| Alcance | Un punto dentro de cada una de las 345 comunas (`representative_point`), 2012-01-01 a 2025-12-31 |
+| Variables | `T2M_MAX` (°C), `T2MDEW` (°C), `RH2M` (%, media diaria), `WS10M_MAX` (m/s), `PRECTOTCORR` (mm/día) |
+| Código | `src/firecal/ingest/clima.py`, `scripts/05b_clima_diario.py` → `data/interim/clima_diario.parquet` |
+| Consultado | 2026-11-14 |
+| Licencia | Datos abiertos de la NASA; pide citar el origen (abajo) |
+
+**Límites que hay que decir en la demo o el informe**
+- **`hrmin` es una aproximación.** POWER no entrega humedad mínima. Se estima como
+  `100 · e(rocío medio) / e(temperatura máxima)` con la fórmula de Magnus. En una prueba (Viña del Mar) quedó
+  siempre bajo la humedad media (correlación 0,95). La humedad media medida va aparte, en `hr_media`.
+- **Resolución gruesa:** la grilla es de ~0,5° × 0,625° (~50 km); comunas vecinas pequeñas comparten valores.
+- **Hora:** POWER entrega hora solar local (`LST`), no la hora civil de Chile; a escala diaria el desfase es
+  despreciable.
+- **Viento en m/s** (Open-Meteo lo daba en km/h).
+
+**Referencia que pide POWER** (https://power.larc.nasa.gov/docs/referencing/): incluir ambas frases y la fecha de acceso.
+
+- The data was obtained from National Aeronautics and Space Administration (NASA) Langley Research Center's
+  Prediction Of Worldwide Energy Resources (POWER) project funded through the NASA Earth Science Division.
+- The data was obtained from the POWER Project's Daily 2.x.x version on 2026/11/14. *(Confirmar el número de versión
+  exacto en la página de POWER antes de publicar.)*
+
 ## 3. Biblioteca del Congreso Nacional (BCN): límites comunales
 
 | Campo | Valor |
