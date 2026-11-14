@@ -17,6 +17,8 @@ import pandas as pd
 import shapely
 from shapely.geometry import mapping
 
+from firecal.export.indice import index_html
+
 VERSION_CONTRATO = "0.2"
 TOLERANCIA_SIMPLIFICACION = 0.005  # grados (~500 m)
 DECIMALES_COORDENADAS = 4
@@ -214,7 +216,8 @@ def exportar(
     ids = sorted(calendario["region_id"].astype(str).unique())
 
     _escribir_json(destino / ARCHIVOS["regiones"], regiones_geojson(comunas))
-    _escribir_json(destino / "manifest.json", manifest(calendario, ahora), indent=2)
+    datos_manifest = manifest(calendario, ahora)
+    _escribir_json(destino / "manifest.json", datos_manifest, indent=2)
 
     for region_id, registros in calendario.groupby(calendario["region_id"].astype(str)):
         _escribir_json(destino / "calendario" / f"{region_id}.json", calendario_region(registros, nombres[region_id]))
@@ -226,8 +229,14 @@ def exportar(
         with open(destino / "focos" / f"{region_id}.csv", "w", encoding="utf-8", newline="") as f:
             f.write(focos_csv(por_region.get(region_id, con_comuna.iloc[0:0])))
 
-    _escribir_json(destino / ARCHIVOS["riesgo"], riesgo_ultimo(riesgo, ahora), indent=2)
-    _escribir_json(destino / ARCHIVOS["metricas"], metricas(datos_metricas), indent=2)
+    datos_riesgo = riesgo_ultimo(riesgo, ahora)
+    datos_metricas_json = metricas(datos_metricas)
+    _escribir_json(destino / ARCHIVOS["riesgo"], datos_riesgo, indent=2)
+    _escribir_json(destino / ARCHIVOS["metricas"], datos_metricas_json, indent=2)
+
+    # Portada estática: sin ella la URL base de GitHub Pages da 404. Va dentro de public/ para que se publique.
+    with open(destino / "index.html", "w", encoding="utf-8", newline="") as f:
+        f.write(index_html(datos_manifest, datos_riesgo, datos_metricas_json))
 
     archivos = [p for p in destino.rglob("*") if p.is_file()]
     return {

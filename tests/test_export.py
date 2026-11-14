@@ -118,7 +118,7 @@ def test_manifest_real(insumos, tmp_path):
     assert manifest["generado_utc"] == "2026-11-15T03:00:00Z"
     assert manifest["periodo"] == {"desde": "2000-11", "hasta": "2025-12"}
     assert manifest["regiones"] == ["05101", "05109"]
-    assert resumen["comunas"] == 2 and resumen["archivos"] == 1 + 1 + 2 + 2 + 1 + 1  # geojson, manifest, 2+2, riesgo, metricas
+    assert resumen["comunas"] == 2 and resumen["archivos"] == 1 + 1 + 1 + 2 + 2 + 1 + 1  # index, geojson, manifest, 2+2, riesgo, metricas
 
 
 def test_riesgo_publica_solo_el_valido_para_mas_reciente(insumos, tmp_path):
