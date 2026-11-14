@@ -344,8 +344,12 @@ def main() -> int:
         "mayoría de las igniciones son humanas.",
         f"- **Caso Viña del Mar:** la víspera del 3 de febrero de 2024, con el fuego todavía en comunas vecinas, el "
         f"modelo subió el riesgo de Viña de {antes:.1f} % a **{vispera:.1f} %** (nivel `{nivel_vispera}`), pero no lo "
-        "marcó como alto. Anticipar el salto de un incendio a otra comuna con solo datos de focos es difícil; es "
-        "donde el viento y la humedad (bloque de clima) pueden aportar.",
+        "marcó como alto. "
+        + ("Ni siquiera con el clima de ese día (calor, baja humedad y viento) anticipa el salto de un incendio a "
+           "otra comuna: el clima eleva el riesgo de toda la zona, no dice hacia dónde avanza el fuego."
+           if "clima" in bloques else
+           "Anticipar el salto de un incendio a otra comuna con solo datos de focos es difícil; es donde el viento y "
+           "la humedad (bloque de clima) pueden aportar."),
         "",
         "![Caso Viña del Mar y captura por método](figuras/riesgo_vina_2024.png)",
         "",

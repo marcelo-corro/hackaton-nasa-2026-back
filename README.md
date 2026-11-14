@@ -83,7 +83,7 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 5b. Clima diario por comuna (NASA POWER) | `scripts/05b_clima_diario.py`, `firecal.ingest.clima` | B | Listo (PR #2) |
 | 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Listo ([reporte](docs/eventos.md)) |
 | 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Listo (PR #1) |
-| 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Base con FIRMS lista ([reporte](docs/riesgo.md)); falta reentrenar con el clima del paso 5b y comparar |
+| 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Listo con FIRMS + clima: `hgb_firms_clima_v1`, AUC 0,837 en 2022-2025 ([reporte](docs/riesgo.md)) |
 | 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Listo (PR #1); la portada `index.html` va en el PR #3 |
 | 10. Publicar en GitHub Pages | `scripts/10_publicar.py`, `firecal.export.publicar` | B | Listo (PR #1); datos reales publicados el 14-11 |
 
