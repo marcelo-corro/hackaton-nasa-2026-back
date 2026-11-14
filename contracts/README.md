@@ -1,4 +1,11 @@
-# Contrato back → front · versión 0.1
+# Contrato back → front · versión 0.2
+
+> Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
+
+**Cambios**
+- 0.2 (14-11-2026): `calendario` agrega `mediana_historica` por registro (el desafío pide comparar el mes
+  actual con la mediana histórica).
+- 0.1 (14-11-2026): primera versión.
 
 El back publica **archivos estáticos** (JSON, GeoJSON y CSV). El front solo los lee: no depende de un servidor
 corriendo. Todos los archivos viven bajo una URL base que se acordará al publicar (GitHub Pages o Release).
@@ -25,7 +32,7 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
 
 ```json
 {
-  "contrato": "0.1",
+  "contrato": "0.2",
   "ejemplo": false,
   "generado_utc": "2026-11-15T03:00:00Z",
   "periodo": {"desde": "2000-11", "hasta": "2025-12"},
@@ -49,7 +56,7 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
 
 ```json
 {
-  "contrato": "0.1",
+  "contrato": "0.2",
   "ejemplo": false,
   "region_id": "05109",
   "nombre": "Viña del Mar",
@@ -58,12 +65,17 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
   "metodo_armonizacion": "razon_zona_mes_v1",
   "registros": [
     {"anio": 2024, "mes": 2, "modis": 12, "viirs": 41, "armonizado": 12.4,
-     "armonizado_p05": 10.6, "armonizado_p95": 14.3, "percentil": 97, "nivel": "extrema"}
+     "armonizado_p05": 10.6, "armonizado_p95": 14.3, "mediana_historica": 3.1,
+     "percentil": 97, "nivel": "extrema"}
   ]
 }
 ```
 
-- Hay un registro por cada mes del período (sin huecos).
+- Hay un registro por cada mes del período (sin huecos; un mes sin focos vale 0, no `null`).
+- `modis` = focos MODIS de Terra + Aqua; `viirs` = focos VIIRS de Suomi NPP (NOAA-20 no se suma: ve los
+  mismos incendios). Ambos son conteos crudos, sin armonizar.
+- `mediana_historica`: mediana de `armonizado` para ese mismo mes en los demás años. Es la referencia para
+  decir "este febrero va 4 veces sobre lo normal" (`armonizado / mediana_historica`).
 - `modis` es `null` cuando no hay MODIS (antes de nov-2000 o después de su fin); `viirs` es `null` antes de 2012.
 - `armonizado`, `armonizado_p05` y `armonizado_p95` son números decimales; el front redondea al mostrar.
 - `percentil`: posición del mes contra el mismo mes de los demás años (0-100).
@@ -73,7 +85,7 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
 
 ```json
 {
-  "contrato": "0.1",
+  "contrato": "0.2",
   "ejemplo": false,
   "calculado_utc": "2026-11-15T03:00:00Z",
   "valido_para": "2026-11-15",
@@ -101,7 +113,7 @@ Columnas, en este orden: `fecha,hora_utc,lat,lon,sensor,satelite,confianza,frp,t
 
 ```json
 {
-  "contrato": "0.1",
+  "contrato": "0.2",
   "ejemplo": false,
   "modelo": "riesgo_24h_v1",
   "periodo_prueba": "2022-2025",

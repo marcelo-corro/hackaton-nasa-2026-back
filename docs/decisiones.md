@@ -4,6 +4,15 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
 ## 2026-11-14
 
+- **Conexión con el front:** el back publica archivos estáticos (contrato v0.2) en GitHub Pages, en un repo
+  público aparte (`aivital-incendios-datos`) que solo lleva archivos generados; el código sigue privado hasta la
+  entrega. Sin servidor: nada que se caiga en la demo. Un área dibujada libre (API) queda fuera del MVP.
+- **Reparto:** A (ciencia de datos: armonización, eventos, riesgo), B (producto de datos: serie provisional,
+  calendario, exportación, publicación, clima) y F (front). Se unen por `contracts/interno.md` y `contracts/README.md`,
+  con validadores en `firecal.contratos`. Detalle en `docs/trabajo_en_equipo.md`.
+- **Contrato v0.2:** el calendario agrega `mediana_historica` (el desafío pide comparar con la mediana histórica).
+- **Unidad de la serie armonizada:** "focos equivalentes MODIS" (provisional: permite comparar con la historia
+  desde 2000; se puede revisar).
 - **Calidad de datos:** no se borran focos, se marcan (paso 4). Conteo por defecto = `uso_base` (vegetación +
   confianza nominal/alta), por día local de Chile. Se verificó que la razón VIIRS/MODIS cambia con los años por
   la deriva de órbita de Terra y Aqua: la armonización calibra por satélite y en el tiempo. La cifra "3,3 estable"

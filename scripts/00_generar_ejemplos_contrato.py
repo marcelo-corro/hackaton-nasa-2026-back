@@ -17,7 +17,7 @@ import numpy as np
 
 RAIZ = Path(__file__).resolve().parents[1]
 SALIDA = RAIZ / "contracts" / "ejemplos"
-CONTRATO = "0.1"
+CONTRATO = "0.2"
 GENERADO = "2026-11-14T00:00:00Z"
 
 REGIONES = [
@@ -59,8 +59,8 @@ def calendario(region_id: str, nombre: str, rng: np.random.Generator) -> dict:
             viirs = int(round(base[i, m] * 3.4 + rng.normal(0, 1))) if anio >= 2012 else None
             viirs = max(viirs, 0) if viirs is not None else None
             armonizado = float(base[i, m])
-            historia = base[:, m]
-            percentil = float((historia < armonizado).mean() * 100)
+            otros_anios = np.delete(base[:, m], i)
+            percentil = float((otros_anios < armonizado).mean() * 100)
             registros.append(
                 {
                     "anio": anio,
@@ -70,6 +70,7 @@ def calendario(region_id: str, nombre: str, rng: np.random.Generator) -> dict:
                     "armonizado": round(armonizado, 1),
                     "armonizado_p05": round(armonizado * 0.85, 1),
                     "armonizado_p95": round(armonizado * 1.15, 1),
+                    "mediana_historica": round(float(np.median(otros_anios)), 1),
                     "percentil": round(percentil),
                     "nivel": _nivel_calendario(percentil),
                 }

@@ -9,9 +9,18 @@ de importar, arma un **calendario de actividad de quema** por comuna con anomal�
 **riesgo de focos a 24-48 h**. El resultado son archivos estáticos que consume el front (repo aparte) según el
 [contrato](contracts/README.md).
 
+## Empieza aquí
+
+| Si eres… | Lee |
+|---|---|
+| Del equipo, recién llegando | [docs/trabajo_en_equipo.md](docs/trabajo_en_equipo.md): objetivo, alcance, roles, tareas y horarios |
+| Back | Tu sección de tareas en esa guía y [contracts/interno.md](contracts/interno.md) |
+| Front | [docs/guia_front.md](docs/guia_front.md) y el [contrato v0.2](contracts/README.md) |
+| Quien prepara el pitch | [docs/calidad_datos.md](docs/calidad_datos.md), [docs/fuentes.md](docs/fuentes.md) y [docs/decisiones.md](docs/decisiones.md) |
+
 ## Cómo correrlo
 
-Requiere Python 3.11 o superior. En Windows, si `Activate.ps1` está bloqueado, usá el `python.exe` del venv por
+Requiere Python 3.11 o superior. En Windows, si `Activate.ps1` está bloqueado, usa el `python.exe` del venv por
 ruta completa.
 
 ```bash
@@ -25,11 +34,11 @@ cp .env.example .env
 .venv/Scripts/python scripts/04_marcar_calidad.py      # marcas de calidad + docs/calidad_datos.md
 ```
 
-Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usá
+Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usa
 `f.region_id.eq("05109").fillna(False)` en vez de `f.region_id == "05109"` combinado con `&`.
 
 **Ojo al contar focos VIIRS:** Suomi NPP y NOAA-20 ven los mismos incendios con ~50 min de diferencia.
-No los sumes: tratá cada satélite como una serie aparte (filtrá por `satelite`).
+No los sumes: trata cada satélite como una serie aparte (filtra por `satelite`).
 
 ## Datos
 
@@ -38,24 +47,31 @@ Cada fuente externa, con su URL, verificación y cita, está en [docs/fuentes.md
 
 - `scripts/01_descargar_datos.py` baja a `data/raw/` los focos FIRMS de Chile (MODIS 2000-2025, VIIRS Suomi NPP
   2012-2025 y NOAA-20 2018-2025) y las comunas de la BCN, y anota tamaño y SHA-256 de cada archivo.
-- Si ya tenés los CSV de FIRMS del Drive del equipo (`informes/datos_8B/firms/`), copialos a `data/raw/firms/`
+- Si ya tienes los CSV de FIRMS del Drive del equipo (`informes/datos_8B/firms/`), cópialos a `data/raw/firms/`
   y el script solo verifica su tamaño contra FIRMS en vez de bajarlos. Los `viirs-noaa20_*` del Drive son
   descargas fallidas (404): NOAA-20 está en FIRMS bajo la carpeta `viirs-jpss1`.
 
 ## Pipeline
 
-| Paso | Script / módulo | Estado |
-|---|---|---|
-| 0. Ejemplos del contrato para el front | `scripts/00_generar_ejemplos_contrato.py` | Listo |
-| 1. Descargar y verificar datos públicos | `scripts/01_descargar_datos.py` | Listo |
-| 2. Unir CSV de FIRMS en una tabla | `scripts/02_ingestar_firms.py`, `firecal.ingest.firms` | Listo (821.539 focos) |
-| 3. Asignar focos a comunas | `scripts/03_asignar_comunas.py`, `firecal.ingest.comunas` | Listo (99,998 % de los focos de vegetación) |
-| 4. Marcar calidad + fecha local | `scripts/04_marcar_calidad.py`, `firecal.calidad` | Listo ([reporte](docs/calidad_datos.md)) |
-| 5. Armonización MODIS ↔ VIIRS | `firecal.harmonize` | Pendiente |
-| 6. Agrupar focos en incendios | `firecal.events` | Pendiente (hipótesis) |
-| 7. Calendario y anomalías | `firecal.anomalies` | Pendiente |
-| 8. Riesgo 24-48 h | `firecal.model` | Pendiente |
-| 9. Exportar al contrato | `firecal.export` | Pendiente |
+A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trabajo_en_equipo.md#3-roles)).
+
+| Paso | Script / módulo | Quién | Estado |
+|---|---|---|---|
+| 0. Ejemplos del contrato para el front | `scripts/00_generar_ejemplos_contrato.py` | — | Listo (v0.2) |
+| 1. Descargar y verificar datos públicos | `scripts/01_descargar_datos.py` | — | Listo |
+| 2. Unir CSV de FIRMS en una tabla | `scripts/02_ingestar_firms.py`, `firecal.ingest.firms` | — | Listo (821.539 focos) |
+| 3. Asignar focos a comunas | `scripts/03_asignar_comunas.py`, `firecal.ingest.comunas` | — | Listo (99,998 % de los focos de vegetación) |
+| 4. Marcar calidad + fecha local | `scripts/04_marcar_calidad.py`, `firecal.calidad` | — | Listo ([reporte](docs/calidad_datos.md)) |
+| 5p. Serie mensual provisional | `scripts/05p_serie_provisional.py` | B | Pendiente (tarea B1) |
+| 5. Armonización MODIS ↔ VIIRS | `scripts/05_armonizar.py`, `firecal.harmonize` | A | Pendiente (A1) |
+| 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Pendiente (A2, hipótesis) |
+| 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Pendiente (B2) |
+| 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Pendiente (A3; necesita B5) |
+| 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Pendiente (B3) |
+| 10. Publicar en GitHub Pages | `scripts/10_publicar.py` | B | Pendiente (B4) |
+
+Las tablas que se pasan entre pasos y sus validadores (`firecal.contratos`) están en
+[contracts/interno.md](contracts/interno.md).
 
 ### Calidad de los datos
 
