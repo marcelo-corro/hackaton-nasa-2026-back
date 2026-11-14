@@ -5,7 +5,7 @@ import pytest
 from firecal.export.publicar import PublicacionError, sincronizar, verificar_destino, verificar_origen
 
 
-def _public(tmp_path, ejemplo=False, comunas=("05101", "05109"), faltan_focos=0):
+def _public(tmp_path, ejemplo=False, comunas=("05101", "05109"), faltan_focos=0, con_index=True):
     carpeta = tmp_path / "public"
     (carpeta / "calendario").mkdir(parents=True)
     (carpeta / "focos").mkdir()
@@ -18,6 +18,8 @@ def _public(tmp_path, ejemplo=False, comunas=("05101", "05109"), faltan_focos=0)
         encoding="utf-8",
     )
     (carpeta / "regiones.geojson").write_text("{}", encoding="utf-8")
+    if con_index:
+        (carpeta / "index.html").write_text("<html>nuevo</html>", encoding="utf-8")
     return carpeta
 
 
@@ -79,3 +81,17 @@ def test_crea_nojekyll_si_no_estaba(tmp_path):
     (repo / ".nojekyll").unlink()
     sincronizar(publico, repo)
     assert (repo / ".nojekyll").exists()
+
+
+def test_rechaza_si_falta_el_index_html(tmp_path):
+    with pytest.raises(PublicacionError, match="index.html"):
+        verificar_origen(_public(tmp_path, con_index=False))
+
+
+def test_el_index_html_no_se_borra_al_publicar_y_reemplaza_al_anterior(tmp_path):
+    publico, repo = _public(tmp_path), _repo(tmp_path)
+    (repo / "index.html").write_text("<html>viejo</html>", encoding="utf-8")
+    sincronizar(publico, repo)
+    assert (repo / "index.html").read_text(encoding="utf-8") == "<html>nuevo</html>"
+    sincronizar(publico, repo)  # una segunda publicación tampoco lo pierde
+    assert (repo / "index.html").exists()

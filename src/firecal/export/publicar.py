@@ -25,6 +25,10 @@ def verificar_origen(publico: Path) -> dict:
     manifest = json.loads(ruta.read_text(encoding="utf-8"))
     if manifest.get("ejemplo") is not False:
         raise PublicacionError('manifest.json no dice "ejemplo": false: no se publican datos de ejemplo como reales.')
+    if not (publico / "index.html").exists():
+        raise PublicacionError(
+            "Falta public/index.html (sin él la URL base da 404). Vuelve a correr scripts/09_exportar.py."
+        )
     esperados = len(manifest.get("regiones", []))
     for carpeta in ("calendario", "focos"):
         presentes = len(list((publico / carpeta).glob("*"))) if (publico / carpeta).is_dir() else 0

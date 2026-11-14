@@ -17,6 +17,9 @@ import pandas as pd
 import shapely
 from shapely.geometry import mapping
 
+from firecal import config
+from firecal.export.indice import index_html
+
 VERSION_CONTRATO = "0.2"
 TOLERANCIA_SIMPLIFICACION = 0.005  # grados (~500 m)
 DECIMALES_COORDENADAS = 4
@@ -31,6 +34,30 @@ ARCHIVOS = {
     "focos": "focos/{region_id}.csv",
     "metricas": "metricas.json",
 }
+
+
+class DestinoProtegidoError(ValueError):
+    """La carpeta de salida es una que `exportar` nunca debe vaciar."""
+
+
+def verificar_destino_borrable(destino: Path) -> None:
+    """Falla si `destino` tiene `.git`, es la raíz del proyecto o contiene a la raíz del proyecto.
+
+    `exportar` vacía su destino antes de escribir; con un `PUBLIC_DIR` mal puesto (por ejemplo el clon del repo de
+    datos o la carpeta del proyecto) borraría el historial de git o el código.
+    """
+    destino = Path(destino).resolve()
+    raiz = config.RAIZ.resolve()
+    if destino == raiz or destino in raiz.parents:
+        raise DestinoProtegidoError(
+            f"{destino} es la raíz del proyecto o una carpeta que la contiene: no se vacía. "
+            "Revisa PUBLIC_DIR en .env (por defecto ./public)."
+        )
+    if (destino / ".git").exists():
+        raise DestinoProtegidoError(
+            f"{destino} tiene un .git (es un repositorio): no se vacía. "
+            "La salida va a una carpeta aparte (./public); para publicar usa scripts/10_publicar.py."
+        )
 
 
 def _escribir_json(ruta: Path, datos: dict, indent: int | None = None) -> None:
@@ -204,8 +231,12 @@ def exportar(
     datos_metricas: dict | None = None,
     ahora: datetime | None = None,
 ) -> dict:
-    """Escribe todos los archivos del contrato en `destino` (se vacía antes). Devuelve un resumen."""
+    """Escribe todos los archivos del contrato en `destino` (se vacía antes). Devuelve un resumen.
+
+    Se niega (`DestinoProtegidoError`) a vaciar una carpeta con `.git`, la raíz del proyecto o una que la contenga.
+    """
     destino = Path(destino)
+    verificar_destino_borrable(destino)
     if destino.exists():
         shutil.rmtree(destino)
     destino.mkdir(parents=True)
@@ -214,7 +245,8 @@ def exportar(
     ids = sorted(calendario["region_id"].astype(str).unique())
 
     _escribir_json(destino / ARCHIVOS["regiones"], regiones_geojson(comunas))
-    _escribir_json(destino / "manifest.json", manifest(calendario, ahora), indent=2)
+    datos_manifest = manifest(calendario, ahora)
+    _escribir_json(destino / "manifest.json", datos_manifest, indent=2)
 
     for region_id, registros in calendario.groupby(calendario["region_id"].astype(str)):
         _escribir_json(destino / "calendario" / f"{region_id}.json", calendario_region(registros, nombres[region_id]))
@@ -226,8 +258,14 @@ def exportar(
         with open(destino / "focos" / f"{region_id}.csv", "w", encoding="utf-8", newline="") as f:
             f.write(focos_csv(por_region.get(region_id, con_comuna.iloc[0:0])))
 
-    _escribir_json(destino / ARCHIVOS["riesgo"], riesgo_ultimo(riesgo, ahora), indent=2)
-    _escribir_json(destino / ARCHIVOS["metricas"], metricas(datos_metricas), indent=2)
+    datos_riesgo = riesgo_ultimo(riesgo, ahora)
+    datos_metricas_json = metricas(datos_metricas)
+    _escribir_json(destino / ARCHIVOS["riesgo"], datos_riesgo, indent=2)
+    _escribir_json(destino / ARCHIVOS["metricas"], datos_metricas_json, indent=2)
+
+    # Portada estática: sin ella la URL base de GitHub Pages da 404. Va dentro de public/ para que se publique.
+    with open(destino / "index.html", "w", encoding="utf-8", newline="") as f:
+        f.write(index_html(datos_manifest, datos_riesgo, datos_metricas_json))
 
     archivos = [p for p in destino.rglob("*") if p.is_file()]
     return {
