@@ -10,6 +10,9 @@ Salida (contrato interno, data/interim/focos.parquet), una fila por detección:
     confianza        string       baja | nominal | alta (misma escala para ambos sensores)
     confianza_modis  Int16        0-100, solo MODIS (VIIRS no tiene valor numérico)
     brillo_k         float        temperatura de brillo (MODIS: brightness, VIIRS: bright_ti4)
+    scan_km          float        tamaño del píxel a lo largo del barrido (crece hacia el borde)
+    track_km         float        tamaño del píxel a lo largo de la órbita
+    area_pixel_km2   float        scan_km x track_km (MODIS ~1 en nadir, VIIRS ~0,14)
     frp              float        potencia radiativa del fuego (MW)
     dia_noche        string       D | N
     tipo             Int8         0 vegetación, 1 volcán, 2 otra fuente fija, 3 costa afuera (NRT no lo trae)
@@ -25,7 +28,7 @@ import pandas as pd
 
 COLUMNAS = [
     "fecha", "hora_utc", "lat", "lon", "sensor", "satelite", "confianza", "confianza_modis",
-    "brillo_k", "frp", "dia_noche", "tipo", "version", "archivo",
+    "brillo_k", "scan_km", "track_km", "area_pixel_km2", "frp", "dia_noche", "tipo", "version", "archivo",
 ]
 
 _SATELITES = {
@@ -71,6 +74,9 @@ def normalizar(df: pd.DataFrame, archivo: str = "") -> pd.DataFrame:
             "lon": df["longitude"].astype(float),
             "sensor": instrumento,
             "satelite": df["satellite"].astype(str).str.strip().str.upper().map(_SATELITES),
+            "scan_km": df["scan"].astype(float),
+            "track_km": df["track"].astype(float),
+            "area_pixel_km2": (df["scan"] * df["track"]).astype(float),
             "frp": df["frp"].astype(float),
             "dia_noche": df["daynight"].astype("string"),
             "tipo": df["type"].astype("Int8") if "type" in df else pd.Series(pd.NA, index=df.index, dtype="Int8"),

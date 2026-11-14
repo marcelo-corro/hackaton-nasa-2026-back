@@ -4,6 +4,12 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
 ## 2026-11-14
 
+- **Calidad de datos:** no se borran focos, se marcan (paso 4). Conteo por defecto = `uso_base` (vegetación +
+  confianza nominal/alta), por día local de Chile. Se verificó que la razón VIIRS/MODIS cambia con los años por
+  la deriva de órbita de Terra y Aqua: la armonización calibra por satélite y en el tiempo. La cifra "3,3 estable"
+  de los informes previos se reemplaza por esta medición.
+- **Sensores:** solo MODIS (Terra, Aqua) y VIIRS (Suomi NPP, NOAA-20). No se suman satélites que ven los mismos
+  incendios. GOES y Sentinel-3 quedan como visión.
 - **Desafío:** se trabaja *Harmonization of MODIS and VIIRS Hot Spots* (8B) y no *Dancing with the SARs* (5D).
   Motivo: 8B tiene datos de Chile ya descargados, ~430 mil focos para entrenar y riesgo técnico bajo; 5D no tiene
   datos NISAR de un sismo chileno ni etiquetas de daño. Detalle en los informes del Drive.

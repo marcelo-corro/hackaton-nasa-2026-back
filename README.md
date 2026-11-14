@@ -22,6 +22,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/01_descargar_datos.py     # ~120 MB, datos públicos, sin cuenta
 .venv/Scripts/python scripts/02_ingestar_firms.py
 .venv/Scripts/python scripts/03_asignar_comunas.py     # ~1 min la primera vez
+.venv/Scripts/python scripts/04_marcar_calidad.py      # marcas de calidad + docs/calidad_datos.md
 ```
 
 Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usá
@@ -49,11 +50,24 @@ Cada fuente externa, con su URL, verificación y cita, está en [docs/fuentes.md
 | 1. Descargar y verificar datos públicos | `scripts/01_descargar_datos.py` | Listo |
 | 2. Unir CSV de FIRMS en una tabla | `scripts/02_ingestar_firms.py`, `firecal.ingest.firms` | Listo (821.539 focos) |
 | 3. Asignar focos a comunas | `scripts/03_asignar_comunas.py`, `firecal.ingest.comunas` | Listo (99,998 % de los focos de vegetación) |
-| 4. Armonización MODIS ↔ VIIRS | `firecal.harmonize` | Pendiente |
-| 5. Agrupar focos en incendios | `firecal.events` | Pendiente (hipótesis) |
-| 6. Calendario y anomalías | `firecal.anomalies` | Pendiente |
-| 7. Riesgo 24-48 h | `firecal.model` | Pendiente |
-| 8. Exportar al contrato | `firecal.export` | Pendiente |
+| 4. Marcar calidad + fecha local | `scripts/04_marcar_calidad.py`, `firecal.calidad` | Listo ([reporte](docs/calidad_datos.md)) |
+| 5. Armonización MODIS ↔ VIIRS | `firecal.harmonize` | Pendiente |
+| 6. Agrupar focos en incendios | `firecal.events` | Pendiente (hipótesis) |
+| 7. Calendario y anomalías | `firecal.anomalies` | Pendiente |
+| 8. Riesgo 24-48 h | `firecal.model` | Pendiente |
+| 9. Exportar al contrato | `firecal.export` | Pendiente |
+
+### Calidad de los datos
+
+El paso 4 **no borra focos: los marca** (`es_vegetacion`, `confianza_ok`, `frp_valido`, `pixel_grande`,
+`uso_base`) y agrega `fecha_local` en hora de Chile. Cada análisis filtra con reglas escritas y prueba cuánto
+cambia el resultado con y sin cada filtro. Regla por defecto para contar focos: `uso_base` (vegetación y
+confianza nominal o alta). Lo que muestra el [reporte de calidad](docs/calidad_datos.md):
+
+- ~19 % de los focos no son vegetación (industria, faenas, volcanes): se excluyen del conteo.
+- Las órbitas de Terra y Aqua (MODIS) se desvían ~1 h desde 2020-2022; las de VIIRS no. Por eso la razón
+  VIIRS/MODIS cambia con los años y **un factor de armonización único no sirve**.
+- La versión de procesamiento de MODIS cambia en 2018 y 2023 (posibles saltos en la serie).
 
 ## Estructura
 
