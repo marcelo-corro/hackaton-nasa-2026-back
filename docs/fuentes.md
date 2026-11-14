@@ -1,0 +1,86 @@
+# Fuentes de datos y cómo citarlas
+
+Regla del equipo: **todo dato externo que use el back se registra acá** con la URL exacta, la fecha de descarga,
+cómo se verificó y la cita que corresponde. Lo que no esté en esta lista no se usa en la demo ni en el pitch.
+
+## 1. NASA FIRMS: focos de calor (datos principales)
+
+| Campo | Valor |
+|---|---|
+| Qué es | Focos activos MODIS Collection 6.1 (Terra y Aqua) y VIIRS 375 m Collection 2 (Suomi NPP y NOAA-20), archivos anuales por país |
+| URL de descarga | `https://firms.modaps.eosdis.nasa.gov/data/country/{carpeta}/{año}/{carpeta}_{año}_Chile.csv` |
+| Carpetas | `modis` (2000-2025), `viirs-snpp` (2012-2025), `viirs-jpss1` = NOAA-20 (2018-2025; 2017 y 2026 dan 404) |
+| Cómo se baja | `scripts/01_descargar_datos.py` (público, sin cuenta) |
+| Versión en los archivos | MODIS `61.03`, VIIRS `2` (columna `version`) |
+| Verificación (14-11-2026) | Los 40 archivos MODIS y Suomi NPP que el equipo tenía en el Drive coinciden en tamaño, byte a byte, con el servidor oficial. Los 8 de NOAA-20 se bajaron directo de FIRMS. Tamaño y SHA-256 de cada archivo: [registro_descargas_2026-11-14.csv](registro_descargas_2026-11-14.csv). La ingesta reproduce las cifras del equipo (tipo 0 desde mar-2012: MODIS 94.325, VIIRS-SNPP 335.116) |
+| Contenido | 821.539 focos: MODIS 189.717 (2000-11 a 2025), Suomi NPP 416.813 (2012-01 a 2025), NOAA-20 215.009 (2018-04 a 2025) |
+| Ojo | Los archivos `viirs-noaa20_*` del Drive son respuestas 404 guardadas como `.csv`: esa carpeta no existe en FIRMS. NOAA-20 está en `viirs-jpss1` |
+
+**Agradecimiento que pide FIRMS** (texto oficial, de https://www.earthdata.nasa.gov/data/tools/firms):
+
+> We acknowledge the use of data and/or imagery from NASA's Fire Information for Resource Management System
+> (FIRMS) (https://earthdata.nasa.gov/firms), part of NASA's Land, Atmosphere Near real-time Capability for Earth
+> observations (LANCE) (https://earthdata.nasa.gov/lance) and NASA's Earth Science Data and Information System
+> (ESDIS).
+
+**Algoritmos de detección** (referencias que lista la misma página):
+
+- Giglio, L., Schroeder, W., & Justice, C. O. (2016). The collection 6 MODIS active fire detection algorithm and
+  fire products. *Remote Sensing of Environment*, 178, 31-41. https://doi.org/10.1016/j.rse.2016.02.054
+- Schroeder, W., Oliva, P., Giglio, L., & Csiszar, I. A. (2014). The New VIIRS 375m active fire detection data
+  product: algorithm description and initial assessment. *Remote Sensing of Environment*, 143, 85-96.
+  https://doi.org/10.1016/j.rse.2013.12.008
+
+## 2. Open-Meteo (ERA5): clima de la prueba de predicción
+
+| Campo | Valor |
+|---|---|
+| Qué es | Clima diario histórico (temperatura máxima, humedad mínima, viento máximo, precipitación) |
+| URL | `https://archive-api.open-meteo.com/v1/archive` (parámetros en `prueba_prediccion.py` del Drive) |
+| Alcance | 40 celdas de 0,5° en Chile centro-sur, 2016-2025 |
+| Copia del equipo | Drive, `informes/datos_8B/prediccion/clima_cache.json` |
+| Condición | El plan gratis de Open-Meteo es para uso no comercial |
+
+**Citas que pide Open-Meteo** (de https://open-meteo.com/en/docs/historical-weather-api):
+
+- Zippenfenig, P. (2023). Open-Meteo.com Weather API [Computer software]. Zenodo. https://doi.org/10.5281/ZENODO.7970649
+- Hersbach, H., et al. (2023). ERA5 hourly data on single levels from 1940 to present [Data set]. ECMWF.
+  https://doi.org/10.24381/cds.adbb2d47
+- Muñoz Sabater, J. (2019). ERA5-Land hourly data from 2001 to present [Data set]. ECMWF.
+  https://doi.org/10.24381/CDS.E2161BAC
+- "Generated using Copernicus Climate Change Service information."
+
+## 3. Biblioteca del Congreso Nacional (BCN): límites comunales
+
+| Campo | Valor |
+|---|---|
+| Qué es | Polígonos de las comunas de Chile (shapefile), sección "Mapas vectoriales" de la BCN |
+| Página | https://www.bcn.cl/siit/mapas_vectoriales |
+| URL de descarga | `https://www.bcn.cl/obtienearchivo?id=repositorio/10221/10396/5/comunas_final.zip` |
+| Descargado | 14-11-2026 con `scripts/01_descargar_datos.py` (SHA-256 en el registro) |
+| Contenido | 346 polígonos: 345 comunas + 1 "Zona sin demarcar" (`cod_comuna = 0`, se excluye). Proyección EPSG:3857. `cod_comuna` es numérico: hay que rellenarlo a 5 dígitos para el CUT (5109 → `"05109"`). 16 geometrías inválidas (hay que repararlas antes de cruzar con los focos) |
+| Estado de los datos | Según la BCN, síntesis de fuentes oficiales con versiones de 2014, 2017 y diciembre de 2018 |
+| Condiciones de uso | Uso libre **señalando como fuente a la Biblioteca del Congreso Nacional de Chile**. Material referencial, no apto para trabajos de precisión geodésica |
+
+**Cita:** Biblioteca del Congreso Nacional de Chile. *División comunal: polígonos de las comunas de Chile*
+[shapefile]. Mapas vectoriales, https://www.bcn.cl/siit/mapas_vectoriales (consultado el 14-11-2026).
+
+## 4. Fuentes documentales de los informes
+
+Los informes del equipo citan noticias, leyes, planes comunales y documentación técnica. Su registro completo
+(URL, fecha de consulta, código HTTP, hash SHA-256 y copia local) está en el Drive:
+`informes/fuentes_8B/registro_fuentes.csv` y `informes/fuentes_5D/`.
+
+## 5. Por registrar cuando se usen
+
+Cada una entra a esta lista recién cuando se descargue y se use:
+
+- Focos casi en tiempo real de 2026 (FIRMS Area API, requiere MAP_KEY).
+- NDVI, temperatura de superficie, cobertura de suelo y relieve (Microsoft Planetary Computer).
+- Pronóstico (ECMWF Open Data o Meteomatics).
+- Catálogo de focos y áreas quemadas de CONAE (autor del desafío).
+
+## 6. Herramientas de IA
+
+Parte del código y del análisis se hizo con asistentes de IA (Claude, de Anthropic). Revisar en la
+*Project Submission Guide* de Space Apps si hay que declararlo y dónde.

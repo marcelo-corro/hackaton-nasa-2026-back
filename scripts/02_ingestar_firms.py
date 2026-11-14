@@ -1,8 +1,8 @@
-"""Paso 1 del pipeline: une los CSV anuales de FIRMS en data/interim/focos.parquet.
+"""Paso 2 del pipeline: une los CSV anuales de FIRMS en data/interim/focos.parquet.
 
 Uso:
-    python scripts/01_ingestar_firms.py
-La carpeta de entrada se toma de FIRMS_RAW_DIR en .env.
+    python scripts/02_ingestar_firms.py
+La carpeta de entrada es FIRMS_RAW_DIR de .env (por defecto data/raw/firms, que llena el paso 1).
 """
 
 from __future__ import annotations

@@ -17,32 +17,36 @@ ruta completa.
 ```bash
 python -m venv .venv
 .venv/Scripts/python -m pip install -e ".[dev]"
-cp .env.example .env        # completar FIRMS_RAW_DIR
+cp .env.example .env
 .venv/Scripts/python -m pytest
-.venv/Scripts/python scripts/01_ingestar_firms.py
+.venv/Scripts/python scripts/01_descargar_datos.py     # ~120 MB, datos públicos, sin cuenta
+.venv/Scripts/python scripts/02_ingestar_firms.py
 ```
 
 ## Datos
 
 Los datos **no se versionan** (`data/` está en `.gitignore`). Ver [data/README.md](data/README.md).
+Cada fuente externa, con su URL, verificación y cita, está en [docs/fuentes.md](docs/fuentes.md).
 
-- Focos FIRMS de Chile 2000-2025: en el Drive del equipo, `informes/datos_8B/firms/`. Apuntá `FIRMS_RAW_DIR` a
-  esa carpeta.
-- Los archivos `viirs-noaa20_*` de esa carpeta son descargas fallidas (respuesta 404 guardada como `.csv`);
-  la ingesta los omite.
+- `scripts/01_descargar_datos.py` baja a `data/raw/` los focos FIRMS de Chile (MODIS 2000-2025, VIIRS Suomi NPP
+  2012-2025 y NOAA-20 2018-2025) y las comunas de la BCN, y anota tamaño y SHA-256 de cada archivo.
+- Si ya tenés los CSV de FIRMS del Drive del equipo (`informes/datos_8B/firms/`), copialos a `data/raw/firms/`
+  y el script solo verifica su tamaño contra FIRMS en vez de bajarlos. Los `viirs-noaa20_*` del Drive son
+  descargas fallidas (404): NOAA-20 está en FIRMS bajo la carpeta `viirs-jpss1`.
 
 ## Pipeline
 
 | Paso | Script / módulo | Estado |
 |---|---|---|
 | 0. Ejemplos del contrato para el front | `scripts/00_generar_ejemplos_contrato.py` | Listo |
-| 1. Unir CSV de FIRMS en una tabla | `scripts/01_ingestar_firms.py`, `firecal.ingest.firms` | Listo |
-| 2. Asignar focos a comunas | `firecal.ingest` | Pendiente (falta el shapefile) |
-| 3. Armonización MODIS ↔ VIIRS | `firecal.harmonize` | Pendiente |
-| 4. Agrupar focos en incendios | `firecal.events` | Pendiente (hipótesis) |
-| 5. Calendario y anomalías | `firecal.anomalies` | Pendiente |
-| 6. Riesgo 24-48 h | `firecal.model` | Pendiente |
-| 7. Exportar al contrato | `firecal.export` | Pendiente |
+| 1. Descargar y verificar datos públicos | `scripts/01_descargar_datos.py` | Listo |
+| 2. Unir CSV de FIRMS en una tabla | `scripts/02_ingestar_firms.py`, `firecal.ingest.firms` | Listo (821.539 focos) |
+| 3. Asignar focos a comunas | `firecal.ingest` | Pendiente (shapefile ya bajado) |
+| 4. Armonización MODIS ↔ VIIRS | `firecal.harmonize` | Pendiente |
+| 5. Agrupar focos en incendios | `firecal.events` | Pendiente (hipótesis) |
+| 6. Calendario y anomalías | `firecal.anomalies` | Pendiente |
+| 7. Riesgo 24-48 h | `firecal.model` | Pendiente |
+| 8. Exportar al contrato | `firecal.export` | Pendiente |
 
 ## Estructura
 

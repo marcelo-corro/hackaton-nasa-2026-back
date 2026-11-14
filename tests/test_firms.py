@@ -13,12 +13,18 @@ VIIRS = (
     "version,bright_ti5,frp,daynight,type\n"
     "-33.05,-71.55,340.2,0.4,0.4,2024-02-02,0600,N,VIIRS,h,2,290.0,12.3,N,0\n"
 )
+NOAA20 = (
+    "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,"
+    "version,bright_ti5,frp,daynight,type\n"
+    "-33.07,-71.50,335.0,0.4,0.4,2024-02-03,0520,N20,VIIRS,l,2,288.0,3.1,N,0\n"
+)
 ERROR_404 = '{"detail":"The file cannot be found","status":404,"title":"File Not Found"}'
 
 
 def _escribir(directorio: Path) -> None:
     (directorio / "modis_2024_Chile.csv").write_text(MODIS, encoding="utf-8")
     (directorio / "viirs-snpp_2024_Chile.csv").write_text(VIIRS, encoding="utf-8")
+    (directorio / "viirs-jpss1_2024_Chile.csv").write_text(NOAA20, encoding="utf-8")
     (directorio / "viirs-noaa20_2024_Chile.csv").write_text(ERROR_404, encoding="utf-8")
     (directorio / "vacio.csv").write_text("", encoding="utf-8")
 
@@ -28,9 +34,18 @@ def test_une_modis_y_viirs_y_omite_404(tmp_path: Path) -> None:
     focos, omitidos = cargar_directorio(tmp_path)
 
     assert list(focos.columns) == COLUMNAS
-    assert len(focos) == 3
+    assert len(focos) == 4
     assert sorted(omitidos) == ["vacio.csv", "viirs-noaa20_2024_Chile.csv"]
-    assert focos["sensor"].value_counts().to_dict() == {"MODIS": 2, "VIIRS": 1}
+    assert focos["sensor"].value_counts().to_dict() == {"MODIS": 2, "VIIRS": 2}
+
+
+def test_noaa20_se_reconoce(tmp_path: Path) -> None:
+    _escribir(tmp_path)
+    focos, _ = cargar_directorio(tmp_path)
+
+    noaa20 = focos[focos["satelite"] == "NOAA20"]
+    assert len(noaa20) == 1
+    assert noaa20.iloc[0]["confianza"] == "baja"
 
 
 def test_confianza_en_escala_comun(tmp_path: Path) -> None:
