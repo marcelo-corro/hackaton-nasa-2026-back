@@ -7,7 +7,9 @@ Back del equipo **AIVital** para NASA Space Apps 2026, desafío
 Toma los focos de calor de FIRMS (MODIS desde 2000, VIIRS desde 2012), los **armoniza** para que el sensor deje
 de importar, arma un **calendario de actividad de quema** por comuna con anomalías contra la historia y estima el
 **riesgo de focos a 24-48 h**. El resultado son archivos estáticos que consume el front (repo aparte) según el
-[contrato](contracts/README.md).
+[contrato](contracts/README.md), publicados en
+**https://marcelo-corro.github.io/aivital-incendios-datos** (repo público
+[aivital-incendios-datos](https://github.com/marcelo-corro/aivital-incendios-datos); hoy con datos de ejemplo).
 
 ## Empieza aquí
 
@@ -68,7 +70,7 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Pendiente (B2) |
 | 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Pendiente (A3; necesita B5) |
 | 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Pendiente (B3) |
-| 10. Publicar en GitHub Pages | `scripts/10_publicar.py` | B | Pendiente (B4) |
+| 10. Publicar en GitHub Pages | `scripts/10_publicar.py` | B | Repo y Pages listos con ejemplos; falta el script (B4) |
 
 Las tablas que se pasan entre pasos y sus validadores (`firecal.contratos`) están en
 [contracts/interno.md](contracts/interno.md).

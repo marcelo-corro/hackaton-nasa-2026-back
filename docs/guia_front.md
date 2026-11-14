@@ -152,15 +152,26 @@ Inicio de sesión, base de datos, dibujar polígonos, editar datos, notificacion
 
 ## 5. Cómo conectarse a los datos
 
-### Una sola variable
-Todo el front depende de **una URL base**, por ejemplo `DATA_BASE_URL`. Cambiarla es lo único que hace falta para
-pasar de datos de ejemplo a datos reales.
+### Una sola variable, y ya es la definitiva
 
-| Fase | `DATA_BASE_URL` apunta a | Cuándo |
+Todo el front depende de **una URL base**, por ejemplo `DATA_BASE_URL`:
+
+```
+https://marcelo-corro.github.io/aivital-incendios-datos
+```
+
+**Ya funciona** (repo público [aivital-incendios-datos](https://github.com/marcelo-corro/aivital-incendios-datos)) y
+permite leer los archivos desde cualquier dominio (CORS abierto). Prueba:
+https://marcelo-corro.github.io/aivital-incendios-datos/manifest.json
+
+La URL no cambia nunca: lo que cambia es el contenido. No tienes que tocar nada en el front para pasar de
+ejemplo a datos reales; basta recargar.
+
+| Fase | Qué hay en esa URL | Cuándo |
 |---|---|---|
-| 0 · Ejemplos | Una copia de [`contracts/ejemplos/`](../contracts/ejemplos/) dentro del repo del front (el repo del back es privado, así que no se puede leer directo) | Desde ya |
-| 1 · Provisional | `https://<cuenta>.github.io/aivital-incendios-datos` (te la pasa David) | Sábado en la noche |
-| 2 · Armonizada | La misma URL; solo cambia el contenido | Domingo en la mañana |
+| 0 · Ejemplos | Forma definitiva (contrato v0.2), **2 comunas con números inventados** (`"ejemplo": true`): `05101` Valparaíso y `05109` Viña del Mar | **Disponible ahora** |
+| 1 · Provisional | Las 345 comunas con datos reales y serie provisional (`metodo` empieza con `provisional`) | Sábado en la noche (lo publica David) |
+| 2 · Armonizada | La serie armonizada definitiva | Domingo en la mañana |
 
 ### Rutas (detalle de cada campo en el [contrato v0.2](../contracts/README.md))
 

@@ -6,7 +6,8 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
 - **Conexión con el front:** el back publica archivos estáticos (contrato v0.2) en GitHub Pages, en un repo
   público aparte (`aivital-incendios-datos`) que solo lleva archivos generados; el código sigue privado hasta la
-  entrega. Sin servidor: nada que se caiga en la demo. Un área dibujada libre (API) queda fuera del MVP.
+  entrega. Creado el mismo día con datos de ejemplo: URL base https://marcelo-corro.github.io/aivital-incendios-datos
+  (CORS abierto verificado), para que el front use la URL definitiva desde el inicio. Sin servidor: nada que se caiga en la demo. Un área dibujada libre (API) queda fuera del MVP.
 - **Reparto:** A (ciencia de datos: armonización, eventos, riesgo), B (producto de datos: serie provisional,
   calendario, exportación, publicación, clima) y F (front). Se unen por `contracts/interno.md` y `contracts/README.md`,
   con validadores en `firecal.contratos`. Detalle en `docs/trabajo_en_equipo.md`.

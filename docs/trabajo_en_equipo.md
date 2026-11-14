@@ -150,18 +150,27 @@ armonización de A.
 - **Listo cuando:** `public/` tiene 345 calendarios, 345 CSV, manifest, GeoJSON, riesgo y métricas, y el test
   de claves pasa.
 
-### B4 · Publicación en GitHub Pages (~1 h)
-**Objetivo:** darle al front una URL base estable.
-- **Pasos:**
-  1. Crear el repo **público** `aivital-incendios-datos` (Pages gratis solo funciona en repos públicos). Lo crea
-     Marcelo y te agrega, o lo creas en tu cuenta. Solo lleva archivos generados: nada de código, `.env` ni llaves.
-  2. Activar Pages desde la rama `main`, carpeta raíz. Agregar un archivo vacío `.nojekyll`.
-  3. `scripts/10_publicar.py`: copia `public/` al clon local del repo de datos (ruta en `.env`, por ejemplo
-     `DATOS_REPO_DIR`), hace commit `datos AAAA-MM-DD HH:MM` y push.
-  4. Abrir `https://<cuenta>.github.io/aivital-incendios-datos/manifest.json` y probar un `fetch` desde otra
-     página para confirmar que el navegador lo deja leer (CORS).
-  5. **Pasarle la URL base a José (F).**
-- **Listo cuando:** el front carga datos reales desde esa URL.
+### B4 · Publicación en GitHub Pages (~45 min)
+**Objetivo:** que los archivos de `public/` lleguen a la URL que ya usa el front.
+
+**Ya está hecho (14-11):** el repo público
+[marcelo-corro/aivital-incendios-datos](https://github.com/marcelo-corro/aivital-incendios-datos) con Pages activo
+desde `main` (raíz, con `.nojekyll`). URL base: **https://marcelo-corro.github.io/aivital-incendios-datos**.
+Hoy sirve los datos de ejemplo y responde con CORS abierto (`Access-Control-Allow-Origin: *`). José ya tiene la URL.
+Pages solo es gratis en repos públicos: por eso este repo lleva **solo archivos generados**, nada de código,
+`.env` ni llaves.
+
+- **Pasos que faltan:**
+  1. Aceptar la invitación de colaborador al repo de datos y clonarlo junto al repo del back.
+  2. Agregar `DATOS_REPO_DIR` a tu `.env`, con la ruta del clon.
+  3. `scripts/10_publicar.py`: borra el contenido publicado anterior (salvo `README.md`, `.nojekyll` y `.git`),
+     copia `public/`, hace commit `datos AAAA-MM-DD HH:MM` y push. Antes de publicar, que verifique que
+     `manifest.json` diga `"ejemplo": false`.
+  4. Después del push, esperar ~1 minuto y abrir
+     https://marcelo-corro.github.io/aivital-incendios-datos/manifest.json para confirmar la nueva fecha de
+     `generado_utc`.
+  5. Avisar a José que ya hay datos reales y actualizar el aviso "Estado actual" del README del repo de datos.
+- **Listo cuando:** el front muestra las 345 comunas con datos reales desde esa URL.
 
 ### B5 · Clima diario por comuna, para el modelo de A (~2-3 h)
 - **Fuente:** Open-Meteo Archive (ERA5), la misma que usó la prueba de Seba. Ya está citada en
