@@ -21,7 +21,14 @@ cp .env.example .env
 .venv/Scripts/python -m pytest
 .venv/Scripts/python scripts/01_descargar_datos.py     # ~120 MB, datos públicos, sin cuenta
 .venv/Scripts/python scripts/02_ingestar_firms.py
+.venv/Scripts/python scripts/03_asignar_comunas.py     # ~1 min la primera vez
 ```
+
+Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usá
+`f.region_id.eq("05109").fillna(False)` en vez de `f.region_id == "05109"` combinado con `&`.
+
+**Ojo al contar focos VIIRS:** Suomi NPP y NOAA-20 ven los mismos incendios con ~50 min de diferencia.
+No los sumes: tratá cada satélite como una serie aparte (filtrá por `satelite`).
 
 ## Datos
 
@@ -41,7 +48,7 @@ Cada fuente externa, con su URL, verificación y cita, está en [docs/fuentes.md
 | 0. Ejemplos del contrato para el front | `scripts/00_generar_ejemplos_contrato.py` | Listo |
 | 1. Descargar y verificar datos públicos | `scripts/01_descargar_datos.py` | Listo |
 | 2. Unir CSV de FIRMS en una tabla | `scripts/02_ingestar_firms.py`, `firecal.ingest.firms` | Listo (821.539 focos) |
-| 3. Asignar focos a comunas | `firecal.ingest` | Pendiente (shapefile ya bajado) |
+| 3. Asignar focos a comunas | `scripts/03_asignar_comunas.py`, `firecal.ingest.comunas` | Listo (99,998 % de los focos de vegetación) |
 | 4. Armonización MODIS ↔ VIIRS | `firecal.harmonize` | Pendiente |
 | 5. Agrupar focos en incendios | `firecal.events` | Pendiente (hipótesis) |
 | 6. Calendario y anomalías | `firecal.anomalies` | Pendiente |

@@ -18,6 +18,7 @@ def _ruta(variable: str, defecto: Path) -> Path:
 
 DATA_DIR = RAIZ / "data"
 FIRMS_RAW_DIR = _ruta("FIRMS_RAW_DIR", DATA_DIR / "raw" / "firms")
+COMUNAS_SHP = DATA_DIR / "raw" / "comunas" / "comunas.shp"
 INTERIM_DIR = DATA_DIR / "interim"
 PROCESSED_DIR = DATA_DIR / "processed"
 PUBLIC_DIR = _ruta("PUBLIC_DIR", RAIZ / "public")
