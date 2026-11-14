@@ -4,6 +4,15 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
 ## 2026-11-14
 
+- **Armonización (A1):** unidad "focos equivalentes MODIS". Regla por período: Terra convertido a Terra + Aqua
+  hasta 2002-06; MODIS observado 2002-07 a 2017-12; VIIRS Suomi NPP convertido desde 2018-01 (MODIS cambia de
+  procesamiento en 2018 y su órbita se desvía: cuenta 8-24 % menos de lo esperado). Se compararon 8 métodos fuera
+  de muestra (calibra 2012-2015, prueba 2016-2017); ganó el factor único calibrado en 2012-2017 (razón 3,18; sesgo
+  −2,9 %, error región-mes 16,6 %, cobertura del intervalo del 90 % = 92 %). Los efectos por región o temporada no
+  son estables entre años. La cifra 3,55 de los informes previos estaba contaminada por la deriva de MODIS.
+  Detalle: `docs/armonizacion.md`.
+- **Validación:** se cambió el plan inicial (calibrar 2012-2018, probar 2019-2025) porque desde 2018 MODIS ya no es
+  una referencia confiable; probar contra él habría medido su deriva, no el error del método.
 - **Conexión con el front:** el back publica archivos estáticos (contrato v0.2) en GitHub Pages, en un repo
   público aparte (`aivital-incendios-datos`) que solo lleva archivos generados; el código sigue privado hasta la
   entrega. Creado el mismo día con datos de ejemplo: URL base https://marcelo-corro.github.io/aivital-incendios-datos

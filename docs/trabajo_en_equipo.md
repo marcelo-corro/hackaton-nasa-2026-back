@@ -91,6 +91,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/02_ingestar_firms.py
 .venv/Scripts/python scripts/03_asignar_comunas.py
 .venv/Scripts/python scripts/04_marcar_calidad.py
+.venv/Scripts/python scripts/05_armonizar.py      # serie armonizada: la entrada de tu tarea B2
 .venv/Scripts/python -m pytest
 ```
 
@@ -101,7 +102,10 @@ Lee también la sección "Calidad de los datos" del [README](../README.md) y el
 
 Los tiempos son estimados para una persona.
 
-### B1 · Serie mensual provisional (~1,5 h)
+### B1 · Serie mensual provisional (ya no hace falta)
+
+> **Actualización (14-11):** la armonización (A1) ya está lista y `scripts/05_armonizar.py` genera la
+> `serie_mensual.parquet` definitiva. **Sáltate B1 y parte por B2.** Lo que sigue queda solo como referencia.
 **Objetivo:** que el calendario, la exportación y el front tengan datos reales desde hoy, sin esperar la
 armonización de A.
 - **Entradas:** `data/interim/focos_calidad.parquet`, `data/interim/comunas.parquet`.
@@ -193,7 +197,7 @@ el mes en curso en la demo. Extender el período del contrato a 2026 requiere av
 
 | Tarea | Salida | Cuándo la necesita B |
 |---|---|---|
-| A1 · Armonización: comparar métodos, calibrar por satélite y en el tiempo, validar fuera de la muestra (calibrar 2012-2018, probar 2019-2025) | `serie_mensual.parquet` definitiva + `docs/armonizacion.md` | Reemplaza la provisional; B solo vuelve a correr 07 → 09 → 10 |
+| A1 · Armonización ✅ **lista** (14-11): factor único calibrado en 2012-2017, validado fuera de muestra con 2016-2017 | `serie_mensual.parquet` definitiva + [`docs/armonizacion.md`](armonizacion.md) | Ya: es la entrada de B2 |
 | A2 · Eventos: agrupar focos en incendios y ver si la diferencia entre sensores se achica | Cifras para el pitch | No la necesita |
 | A3 · Riesgo a 24-48 h, con validación temporal y métricas honestas | `riesgo.parquet` + `metricas.json` | B3 los incluye en la exportación |
 | A4 · Cifras y gráficos para el pitch | `docs/` | — |
@@ -216,9 +220,9 @@ el mes en curso en la demo. Extender el período del contrato a 2026 requiere av
 
 | Cuándo | Qué |
 |---|---|
-| Sáb 17:00 | Punto de control: B1 listo (David), José con datos de ejemplo en pantalla |
+| Sáb 17:00 | Punto de control: B2 en curso (David), José con datos de ejemplo en pantalla |
 | Sáb 21:00 | Punto de control: B2-B3 listos, primeros datos reales en Pages |
-| Dom 09:00 | Punto de control: A1 integrado (serie armonizada en la app) |
+| Dom 09:00 | Punto de control: serie armonizada visible en la app (A1 ya está lista) |
 | Dom 13:00 | Punto de control: riesgo (A3) dentro o descartado para la demo |
 | Dom 17:00 | **Congelar funciones:** desde aquí solo arreglos |
 | Dom 20:00 | Demo en inglés y video listos |

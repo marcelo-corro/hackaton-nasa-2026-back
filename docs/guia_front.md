@@ -38,6 +38,10 @@ esa comuna, deja descargar los focos y, si alcanza, muestra el riesgo para maña
 - **Selector de rango de años.**
 - **Tarjeta "este mes contra lo normal"**: `armonizado / mediana_historica` (por ejemplo "×4,2 sobre lo normal")
   y el `nivel` con texto, no solo color.
+  **Ojo: si `mediana_historica` es 0, no dividas.** Pasa en muchas comunas y meses donde lo normal es no tener
+  focos. En ese caso compara con el **máximo de los años anteriores** para ese mes, que puedes calcular con el
+  mismo calendario. Caso real: Viña del Mar, febrero de 2024 = **32 focos equivalentes** (rango 20-45); lo normal
+  en febrero es 0 y el peor febrero anterior tuvo 9.
 - **Gráfico anual**: total por año, para ver los años extremos (2017, 2023).
 - **Botón "Descargar CSV"** de `focos/{region_id}.csv`, filtrado en el navegador por el rango de fechas elegido.
 
@@ -122,7 +126,8 @@ fuego"*. Es la explicación del desafío en un solo gesto.
 | Dónde | Español | English |
 |---|---|---|
 | Título | ¿Es normal el fuego de este mes en tu comuna? | Is this month's fire activity normal in your commune? |
-| Tarjeta | Febrero 2024: 4,2 veces un febrero normal en Viña del Mar | February 2024: 4.2× a typical February in Viña del Mar |
+| Tarjeta (mediana > 0) | Febrero 2024: 4,2 veces un febrero normal | February 2024: 4.2× a typical February |
+| Tarjeta (mediana = 0) | Febrero 2024: 32 focos. Lo normal es 0; el peor febrero anterior tuvo 9 | February 2024: 32 hotspots. Usually 0; the worst previous February had 9 |
 | Botón | Ver sin armonizar | Show raw satellite data |
 | Ayuda de la unidad | Focos equivalentes MODIS: los dos satélites en una misma escala, para comparar 2005 con 2025 | MODIS-equivalent hotspots: both satellites on one scale, so 2005 and 2025 are comparable |
 | Aviso del riesgo | Anticipa bien cómo se propaga un incendio activo; no predice dónde empieza uno | Good at anticipating how active fires spread; it does not predict where a new fire starts |
@@ -147,7 +152,7 @@ Inicio de sesión, base de datos, dibujar polígonos, editar datos, notificacion
 |---|---|---|
 | 0-5 | Mapa de Chile | *Satellites have tracked fires since 2000, but the sensors changed.* |
 | 5-13 | Viña del Mar con "Ver sin armonizar": salto en 2012 | *Raw data jumps in 2012. That's a new satellite, not more fire.* |
-| 13-22 | Vuelta a "Armonizada"; febrero de 2024 en EXTREMA | *Harmonized, February 2024 stands out: several times a normal February.* |
+| 13-22 | Vuelta a "Armonizada"; febrero de 2024 en EXTREMA | *Harmonized, February 2024 stands out: 32 hotspots where the worst previous February had 9.* |
 | 22-30 | Tarjeta de riesgo, descarga de CSV y fuentes | *All 345 communes of Chile, with open data and an honest risk outlook.* |
 
 ## 5. Cómo conectarse a los datos

@@ -1,5 +1,5 @@
 # Reporte de calidad de los focos FIRMS
-_Generado por `scripts/04_marcar_calidad.py` el 2026-11-14 16:33 UTC. No editar a mano: se regenera._
+_Generado por `scripts/04_marcar_calidad.py` el 2026-11-14 17:42 UTC. No editar a mano: se regenera._
 
 ## 1. Integridad
 - Focos: **821 539**, del 2000-11-01 al 2025-12-31.
@@ -79,7 +79,7 @@ Terra y Aqua (MODIS) se están desviando de su órbita original; Suomi NPP y NOA
 | 2025 | 19.77 | 18.83 | 18.90 | 13.97 |
 
 ## 6. Razones anuales entre satélites (focos `uso_base`)
-Si la razón cambia con los años, un factor de armonización único no sirve.
+Si la razón cambia con los años, un factor calibrado con todo el período no sirve: hay que calibrar en el período en que ambos sensores son estables (ver [armonizacion.md](armonizacion.md)).
 
 | año | SNPP/Terra | SNPP/Aqua | SNPP/MODIS | NOAA20/SNPP |
 |---|---|---|---|---|

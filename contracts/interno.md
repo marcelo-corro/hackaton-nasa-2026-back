@@ -30,8 +30,8 @@ sin focos va con 0, no se omite.
 | `region_id` | string | CUT de 5 dígitos (`"05109"`) |
 | `anio`, `mes` | int | año y mes **locales** (se cuentan por `fecha_local`, no por la fecha UTC) |
 | `modis` | Int64 | focos MODIS **Terra + Aqua** con `uso_base`, sin armonizar |
-| `viirs` | Int64 | focos VIIRS de **Suomi NPP** con `uso_base`, sin armonizar; nulo antes de 2012. NOAA-20 no se suma |
-| `armonizado` | float | serie armonizada en **focos equivalentes MODIS**; nunca nula ni negativa |
+| `viirs` | Int64 | focos VIIRS de **Suomi NPP** con `uso_base`, sin armonizar; nulo antes de 2012-02 (Suomi NPP empieza el 20-ene-2012). NOAA-20 no se suma |
+| `armonizado` | float | serie armonizada en **focos equivalentes MODIS**; nunca nula ni negativa. En la versión de A: Terra convertido hasta 2002-06, MODIS observado 2002-07 a 2017-12, VIIRS convertido desde 2018-01 ([detalle](../docs/armonizacion.md)) |
 | `armonizado_p05`, `armonizado_p95` | float | intervalo de incertidumbre; puede ser nulo en la versión provisional |
 | `metodo` | string | un solo valor para toda la tabla: `provisional_factor_unico` (B) o el nombre del método de A |
 

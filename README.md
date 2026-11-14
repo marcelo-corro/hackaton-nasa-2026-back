@@ -34,6 +34,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/02_ingestar_firms.py
 .venv/Scripts/python scripts/03_asignar_comunas.py     # ~1 min la primera vez
 .venv/Scripts/python scripts/04_marcar_calidad.py      # marcas de calidad + docs/calidad_datos.md
+.venv/Scripts/python scripts/05_armonizar.py           # serie armonizada + docs/armonizacion.md
 ```
 
 Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usa
@@ -64,8 +65,8 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 2. Unir CSV de FIRMS en una tabla | `scripts/02_ingestar_firms.py`, `firecal.ingest.firms` | — | Listo (821.539 focos) |
 | 3. Asignar focos a comunas | `scripts/03_asignar_comunas.py`, `firecal.ingest.comunas` | — | Listo (99,998 % de los focos de vegetación) |
 | 4. Marcar calidad + fecha local | `scripts/04_marcar_calidad.py`, `firecal.calidad` | — | Listo ([reporte](docs/calidad_datos.md)) |
-| 5p. Serie mensual provisional | `scripts/05p_serie_provisional.py` | B | Pendiente (tarea B1) |
-| 5. Armonización MODIS ↔ VIIRS | `scripts/05_armonizar.py`, `firecal.harmonize` | A | Pendiente (A1) |
+| 5p. Serie mensual provisional | `scripts/05p_serie_provisional.py` | B | Ya no hace falta (la serie armonizada existe) |
+| 5. Armonización MODIS ↔ VIIRS | `scripts/05_armonizar.py`, `firecal.harmonize` | A | Listo ([reporte](docs/armonizacion.md)) |
 | 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Pendiente (A2, hipótesis) |
 | 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Pendiente (B2) |
 | 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Pendiente (A3; necesita B5) |
@@ -84,7 +85,8 @@ confianza nominal o alta). Lo que muestra el [reporte de calidad](docs/calidad_d
 
 - ~19 % de los focos no son vegetación (industria, faenas, volcanes): se excluyen del conteo.
 - Las órbitas de Terra y Aqua (MODIS) se desvían ~1 h desde 2020-2022; las de VIIRS no. Por eso la razón
-  VIIRS/MODIS cambia con los años y **un factor de armonización único no sirve**.
+  VIIRS/MODIS cambia con los años: **un factor calibrado con todo el período no sirve**. La armonización calibra
+  solo con 2012-2017 (MODIS estable) y desde 2018 usa VIIRS convertido ([detalle](docs/armonizacion.md)).
 - La versión de procesamiento de MODIS cambia en 2018 y 2023 (posibles saltos en la serie).
 
 ## Estructura

@@ -24,6 +24,8 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
+from firecal.reportes import tabla_md
+
 AREA_NADIR_KM2 = {"MODIS": 1.0, "VIIRS": 0.375 * 0.375}
 FACTOR_PIXEL_GRANDE = 2.0
 LON_LIMITE_ISLA_DE_PASCUA = -100.0  # al oeste de esto, zona horaria de Isla de Pascua
@@ -64,28 +66,7 @@ def marcar_calidad(focos: pd.DataFrame) -> pd.DataFrame:
 
 # --- Reporte -----------------------------------------------------------------------------------------
 
-
-def _formato(valor: object, decimales: int) -> str:
-    if valor is None or (isinstance(valor, float) and np.isnan(valor)) or valor is pd.NA:
-        return "—"
-    if isinstance(valor, (float, np.floating)):
-        return f"{valor:,.{decimales}f}".replace(",", " ")
-    if isinstance(valor, (int, np.integer)):
-        return f"{valor:,}".replace(",", " ")
-    if isinstance(valor, pd.Timestamp):
-        return valor.strftime("%Y-%m-%d")
-    return str(valor)
-
-
-def _tabla(df: pd.DataFrame, decimales: int = 2) -> str:
-    """DataFrame a tabla Markdown (sin depender de `tabulate`)."""
-    encabezado = [str(df.index.name or "")] + [str(c) for c in df.columns]
-    lineas = ["| " + " | ".join(encabezado) + " |", "|" + "---|" * len(encabezado)]
-    for indice, fila in df.iterrows():
-        partes = indice if isinstance(indice, tuple) else (indice,)
-        etiqueta = " / ".join(p.strftime("%Y-%m-%d") if isinstance(p, pd.Timestamp) else str(p) for p in partes)
-        lineas.append("| " + " | ".join([etiqueta] + [_formato(v, decimales) for v in fila]) + " |")
-    return "\n".join(lineas)
+_tabla = tabla_md
 
 
 def _razones_anuales(marcados: pd.DataFrame, filtro: pd.Series) -> pd.DataFrame:
@@ -168,7 +149,8 @@ def reporte_calidad(marcados: pd.DataFrame) -> str:
         _tabla(deriva, 2),
         "",
         "## 6. Razones anuales entre satélites (focos `uso_base`)",
-        "Si la razón cambia con los años, un factor de armonización único no sirve.",
+        "Si la razón cambia con los años, un factor calibrado con todo el período no sirve: hay que calibrar en el "
+        "período en que ambos sensores son estables (ver [armonizacion.md](armonizacion.md)).",
         "",
         _tabla(razones_base, 2),
         "",
