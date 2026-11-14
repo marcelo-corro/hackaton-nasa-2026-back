@@ -47,8 +47,8 @@ validada con datos de Chile, y la app muestra sus propios límites y su desempe�
 | Rol | Quién | Lo que le pertenece |
 |---|---|---|
 | **A · Back, ciencia de datos** | Marcelo | `src/firecal/harmonize/`, `events/`, `model/`; scripts `05_armonizar`, `06_eventos`, `08_riesgo` |
-| **B · Back, producto de datos** | _(completar)_ | `src/firecal/anomalies/`, `export/`, `ingest/clima.py`, `ingest/firms_nrt.py`; scripts `05p_serie_provisional`, `07_calendario`, `09_exportar`, `10_publicar` |
-| **F · Front** | _(completar)_ | Repo del front. Su guía: [docs/guia_front.md](guia_front.md) |
+| **B · Back, producto de datos** | David | `src/firecal/anomalies/`, `export/`, `ingest/clima.py`, `ingest/firms_nrt.py`; scripts `05p_serie_provisional`, `07_calendario`, `09_exportar`, `10_publicar` |
+| **F · Front** | José | Repo del front. Su guía: [docs/guia_front.md](guia_front.md) |
 
 **Archivos compartidos** (`config.py`, `pyproject.toml`, `README.md`, `docs/`, `contracts/`): cambios chicos, por
 PR y **solo agregando**. Nunca reescribir lo que otro escribió sin hablarlo.
@@ -97,7 +97,7 @@ cp .env.example .env
 Lee también la sección "Calidad de los datos" del [README](../README.md) y el
 [reporte de calidad](calidad_datos.md): explican por qué se cuenta con `uso_base` y por día local.
 
-## 6. Tareas de B (en este orden)
+## 6. Tareas de B · David (en este orden)
 
 Los tiempos son estimados para una persona.
 
@@ -160,7 +160,7 @@ armonización de A.
      `DATOS_REPO_DIR`), hace commit `datos AAAA-MM-DD HH:MM` y push.
   4. Abrir `https://<cuenta>.github.io/aivital-incendios-datos/manifest.json` y probar un `fetch` desde otra
      página para confirmar que el navegador lo deja leer (CORS).
-  5. **Pasarle la URL base a F.**
+  5. **Pasarle la URL base a José (F).**
 - **Listo cuando:** el front carga datos reales desde esa URL.
 
 ### B5 · Clima diario por comuna, para el modelo de A (~2-3 h)
@@ -180,7 +180,7 @@ armonización de A.
 FIRMS Area API (`VIIRS_NOAA20_NRT`, `VIIRS_NOAA21_NRT`, `MODIS_NRT`) con la MAP_KEY en `.env`. Sirve para mostrar
 el mes en curso en la demo. Extender el período del contrato a 2026 requiere avisar a F y subir la versión.
 
-## 7. Tareas de A (para que B sepa qué viene y cuándo)
+## 7. Tareas de A · Marcelo (para que B sepa qué viene y cuándo)
 
 | Tarea | Salida | Cuándo la necesita B |
 |---|---|---|
@@ -207,7 +207,7 @@ el mes en curso en la demo. Extender el período del contrato a 2026 requiere av
 
 | Cuándo | Qué |
 |---|---|
-| Sáb 17:00 | Punto de control: B1 listo, F con datos de ejemplo en pantalla |
+| Sáb 17:00 | Punto de control: B1 listo (David), José con datos de ejemplo en pantalla |
 | Sáb 21:00 | Punto de control: B2-B3 listos, primeros datos reales en Pages |
 | Dom 09:00 | Punto de control: A1 integrado (serie armonizada en la app) |
 | Dom 13:00 | Punto de control: riesgo (A3) dentro o descartado para la demo |

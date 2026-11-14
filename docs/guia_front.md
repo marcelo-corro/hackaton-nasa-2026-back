@@ -1,6 +1,6 @@
 # Guía del front · AIVital
 
-Para quien construye la app web. El back entrega **archivos estáticos en una URL** (no hay servidor): el front
+Para José, que construye la app web. El back entrega **archivos estáticos en una URL** (no hay servidor): el front
 solo los lee con `fetch`. Contexto completo del proyecto en [trabajo_en_equipo.md](trabajo_en_equipo.md).
 
 ## 1. Qué construimos y para quién
@@ -54,7 +54,103 @@ esa comuna, deja descargar los focos y, si alcanza, muestra el riesgo para maña
   FIRMS, la Biblioteca del Congreso Nacional por los límites comunales y, si se muestra el riesgo, Open-Meteo/ERA5).
 - Equipo y limitaciones.
 
-## 4. Cómo conectarse a los datos
+## 4. Propuesta de producto (idea para partir; José decide)
+
+### Concepto
+- **Nombre tentativo:** *Calendario de Fuego · Chile* (en inglés, *Chile Fire Calendar*).
+- **Pregunta que responde:** *¿Es normal el fuego de este mes en mi comuna?*
+- **En una frase:** buscas tu comuna y en segundos ves si hay más fuego de lo normal, sobre 25 años de datos que ya
+  corrigen el cambio de satélites.
+
+### Recorrido del usuario (3 pasos)
+1. **Busca o toca su comuna** en el mapa.
+2. **Ve la ficha:** la tarjeta "contra lo normal" y el calendario de 25 años.
+3. **Descarga los focos** en CSV o mira el riesgo para mañana.
+
+### Boceto de la ficha de comuna (escritorio)
+Los números del boceto son ilustrativos; los reales vienen del back.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Calendario de Fuego · Chile        [ Buscar comuna...      ]   ES | EN  (i) │
+├─────────────────────────┬───────────────────────────────────────────────────┤
+│                         │ Viña del Mar · Región de Valparaíso               │
+│   MAPA DE CHILE         │ ┌──────────────────────┐ ┌──────────────────────┐ │
+│   comunas coloreadas    │ │ Febrero 2024         │ │ Riesgo para mañana   │ │
+│   por nivel             │ │ EXTREMA              │ │ ALTO                 │ │
+│                         │ │ ×4,2 sobre un        │ │ "Modelo en           │ │
+│   [la comuna elegida    │ │ febrero normal       │ │  validación" si no   │ │
+│    queda destacada]     │ └──────────────────────┘ │  hay métricas        │ │
+│                         │                          └──────────────────────┘ │
+│                         │ Serie: (•) Armonizada  ( ) MODIS crudo  ( ) VIIRS │
+│                         │ Años:  2000 [=========================] 2025      │
+│                         │                                                   │
+│                         │        E  F  M  A  M  J  J  A  S  O  N  D         │
+│                         │  2025  ▓  ▓  ░  ░  ·  ·  ·  ·  ·  ░  ▓  ▓         │
+│                         │  2024  ▓  █  ▓  ░  ·  ·  ·  ·  ·  ░  ▓  ▓         │
+│                         │  ...                       (calendario de calor)  │
+│                         │                                                   │
+│                         │  Total por año: ▁▂▁▃▁▁▂▂▁▂▁▁▁▁▁▁█▂▂▁▂▁▃█▂▁        │
+│                         │                                                   │
+│                         │ [ Descargar focos (CSV) ]    Fuentes: NASA FIRMS… │
+└─────────────────────────┴───────────────────────────────────────────────────┘
+```
+
+En el **teléfono**: el mapa pasa arriba (plegable), la ficha abajo, y el calendario se desplaza en horizontal.
+
+### El "momento wow" para el jurado
+Un botón **"Ver sin armonizar"**. Al activarlo, el calendario muestra los datos crudos de los satélites y se ve
+un **salto artificial en 2012**, cuando entra VIIRS. Al volver a "Armonizada", el salto desaparece. Sugerencia:
+una transición suave de colores entre ambas vistas y una anotación sobre 2012: *"aquí cambió el satélite, no el
+fuego"*. Es la explicación del desafío en un solo gesto.
+
+### Componentes y de dónde sale cada dato
+
+| Componente | Archivo | Campos |
+|---|---|---|
+| Buscador de comunas | `manifest.json`, `regiones.geojson` | `region_id`, `nombre` |
+| Mapa por colores | `regiones.geojson` + `riesgo/ultimo.json` (o el último mes del calendario) | `nivel` |
+| Tarjeta "contra lo normal" | `calendario/{region_id}.json`, último mes con datos | `armonizado`, `mediana_historica`, `nivel` |
+| Tarjeta de riesgo | `riesgo/ultimo.json`, `metricas.json` | `prob_foco`, `nivel`, `nota` |
+| Calendario de calor | `calendario/{region_id}.json` | `armonizado` (o `modis` / `viirs` según el selector), `percentil`, `nivel` |
+| Total por año | `calendario/{region_id}.json` | suma de `armonizado` por año |
+| Descarga | `focos/{region_id}.csv` | se filtra por el rango de años elegido |
+| Fuentes | texto fijo | copiar de [fuentes.md](fuentes.md) |
+
+### Textos sugeridos (español / inglés para la demo)
+
+| Dónde | Español | English |
+|---|---|---|
+| Título | ¿Es normal el fuego de este mes en tu comuna? | Is this month's fire activity normal in your commune? |
+| Tarjeta | Febrero 2024: 4,2 veces un febrero normal en Viña del Mar | February 2024: 4.2× a typical February in Viña del Mar |
+| Botón | Ver sin armonizar | Show raw satellite data |
+| Ayuda de la unidad | Focos equivalentes MODIS: los dos satélites en una misma escala, para comparar 2005 con 2025 | MODIS-equivalent hotspots: both satellites on one scale, so 2005 and 2025 are comparable |
+| Aviso del riesgo | Anticipa bien cómo se propaga un incendio activo; no predice dónde empieza uno | Good at anticipating how active fires spread; it does not predict where a new fire starts |
+
+### Paleta sugerida
+- **Calendario:** *cividis* (apta para daltonismo), con escala por cuantiles.
+- **Niveles:** baja `#4575b4` (azul), normal `#bdbdbd` (gris), alta `#fdae61` (naranja), extrema `#a50026`
+  (rojo oscuro). **Siempre acompañados del texto**, nunca solo el color.
+
+### Si sobra tiempo (en este orden)
+1. **Enlace compartible:** `?comuna=05109` abre directo esa ficha (sirve para la demo).
+2. **Comparar dos comunas** lado a lado.
+3. **Ranking:** comunas con más meses "extrema" en la última temporada.
+4. **Modo presentación:** pantalla completa con Viña del Mar ya cargada.
+
+### Fuera de alcance (no gastar tiempo)
+Inicio de sesión, base de datos, dibujar polígonos, editar datos, notificaciones.
+
+### Guion de la demo de 30 segundos
+
+| Segundos | En pantalla | Narración (inglés) |
+|---|---|---|
+| 0-5 | Mapa de Chile | *Satellites have tracked fires since 2000, but the sensors changed.* |
+| 5-13 | Viña del Mar con "Ver sin armonizar": salto en 2012 | *Raw data jumps in 2012. That's a new satellite, not more fire.* |
+| 13-22 | Vuelta a "Armonizada"; febrero de 2024 en EXTREMA | *Harmonized, February 2024 stands out: several times a normal February.* |
+| 22-30 | Tarjeta de riesgo, descarga de CSV y fuentes | *All 345 communes of Chile, with open data and an honest risk outlook.* |
+
+## 5. Cómo conectarse a los datos
 
 ### Una sola variable
 Todo el front depende de **una URL base**, por ejemplo `DATA_BASE_URL`. Cambiarla es lo único que hace falta para
@@ -63,7 +159,7 @@ pasar de datos de ejemplo a datos reales.
 | Fase | `DATA_BASE_URL` apunta a | Cuándo |
 |---|---|---|
 | 0 · Ejemplos | Una copia de [`contracts/ejemplos/`](../contracts/ejemplos/) dentro del repo del front (el repo del back es privado, así que no se puede leer directo) | Desde ya |
-| 1 · Provisional | `https://<cuenta>.github.io/aivital-incendios-datos` (te la pasa B) | Sábado en la noche |
+| 1 · Provisional | `https://<cuenta>.github.io/aivital-incendios-datos` (te la pasa David) | Sábado en la noche |
 | 2 · Armonizada | La misma URL; solo cambia el contenido | Domingo en la mañana |
 
 ### Rutas (detalle de cada campo en el [contrato v0.2](../contracts/README.md))
@@ -113,7 +209,7 @@ async function descargarCsv(regionId, nombre) {
 - Métricas en `null` → "Modelo en validación".
 - Cargar el GeoJSON una vez y cada calendario **solo cuando se abre** la comuna (son 345 archivos).
 
-## 5. Diseño
+## 6. Diseño
 
 - **Rampa del calendario:** secuencial y apta para daltonismo (viridis o cividis). Escala logarítmica o por
   cuantiles: hay meses con 0 y meses con cientos de focos.
@@ -123,7 +219,7 @@ async function descargarCsv(regionId, nombre) {
 - **Idioma:** interfaz en español; para la demo y el juicio global hace falta una versión en inglés (basta un
   diccionario de textos).
 
-## 6. Tecnología (decide F)
+## 7. Tecnología (decide José)
 
 - **Opción A:** React + Vite, mapa con MapLibre GL o Leaflet, calendario con ECharts, Plotly o D3. Se publica en
   GitHub Pages, Vercel o Netlify.
@@ -131,7 +227,7 @@ async function descargarCsv(regionId, nombre) {
   equipo ya se probó un deploy).
 - En cualquier caso: hosting estático y **ninguna llave ni secreto en el front**.
 
-## 7. Listo para la demo
+## 8. Listo para la demo
 
 - [ ] Abre en una URL pública, en computador y en teléfono.
 - [ ] Buscar una comuna, ver su calendario y cambiar entre serie armonizada y crudas.
@@ -145,9 +241,9 @@ async function descargarCsv(regionId, nombre) {
 **Demo obligatoria de Space Apps:** video de 30 segundos o menos, o hasta 7 láminas, en inglés y con enlace
 público. Caso sugerido para mostrar: Viña del Mar, febrero de 2024.
 
-## 8. Coordinación
+## 9. Coordinación
 
-- **Dudas sobre los datos o la URL:** B. **Sobre qué significa un número:** A.
+- **Dudas sobre los datos o la URL:** David (B). **Sobre qué significa un número:** Marcelo (A).
 - Si necesitas un campo nuevo o un cambio de forma, pídelo en el chat del equipo: se sube la versión del contrato
   y se avisa antes de publicarlo.
 - Puntos de control y horario de cierre: [trabajo_en_equipo.md](trabajo_en_equipo.md#9-ritmo-hora-de-chile).
