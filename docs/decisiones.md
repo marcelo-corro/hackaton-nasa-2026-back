@@ -4,6 +4,13 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
 ## 2026-11-14
 
+- **Riesgo con clima (NASA POWER, B5 de David):** se suma el bloque de clima (temperatura máxima, humedad mínima
+  aproximada, viento, lluvia, lluvia de 7 días y días sin llover). Ganó en el período de calibración y queda como
+  modelo publicado: `hgb_firms_clima_v1`. En prueba 2022-2025: AUC 0,827 → **0,837**, precisión media 0,253 →
+  **0,271**, captura del 10 % de mayor riesgo 50 % → **52 %**; en nivel muy alto acierta 45 % (antes 44 %) y cubre
+  22 % (antes 19 %). Mejora modesta pero en todas las métricas y segmentos; la lluvia es la variable de clima que más
+  pesa. No anticipa el salto del incendio de Viña 2024 a otra comuna: el clima eleva el riesgo de la zona, no indica
+  hacia dónde avanza el fuego.
 - **Riesgo (A3), versión base:** comuna × día, objetivo = foco Suomi NPP al día siguiente. Entrena 2012-2019, calibra
   2020-2021, prueba 2022-2025. Gradient boosting con variables FIRMS: AUC 0,827 (climatología 0,789, persistencia
   0,811; regresión logística 0,832, prácticamente igual). El 10 % de mayor riesgo captura el 50 % de los días con
