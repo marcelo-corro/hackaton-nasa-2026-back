@@ -91,3 +91,28 @@ def test_sin_riesgo_ni_metricas_dice_pendiente():
 def test_escapa_el_contenido_dinamico():
     html = index_html({**MANIFEST, "generado_utc": "<b>x</b>"}, RIESGO, METRICAS)
     assert "<b>x</b>" not in html and "&lt;b&gt;x&lt;/b&gt;" in html
+
+
+def test_sin_metricas_dice_modelo_en_validacion():
+    for metricas in (None, {}, {"auc": None}, {"auc": None, "nota": "Pendiente: todavía no hay modelo validado."}):
+        html = index_html(MANIFEST, {"items": []}, metricas)
+        assert "Modelo en validación" in html, metricas
+        assert "Pendiente: todavía no hay modelo validado." not in html  # se reemplaza, no se repite
+
+
+def test_con_metricas_no_aparece_modelo_en_validacion():
+    html = index_html(MANIFEST, RIESGO, METRICAS)
+    assert "Modelo en validación" not in html and "Probado en 2022-2025" in html
+
+
+def test_la_cita_de_power_trae_la_version_y_la_fecha_de_acceso():
+    html = index_html(MANIFEST, RIESGO_CLIMA, METRICAS_CLIMA)
+    assert "Daily 2.10.3 version on 2026/11/14" in html
+
+
+def test_con_el_modelo_publicado_hoy_la_portada_cita_power_y_muestra_su_nota():
+    riesgo = {**RIESGO, "modelo": "hgb_firms_clima_v1"}
+    metricas = {"modelo": "hgb_firms_clima_v1", "auc": 0.837, "periodo_prueba": "2022-2025", "nota": "Nota <real> & prueba."}
+    html = index_html(MANIFEST, riesgo, metricas)
+    assert "Prediction Of Worldwide Energy Resources (POWER)" in html
+    assert "Nota &lt;real&gt; &amp; prueba." in html and "AUC 0.837" in html

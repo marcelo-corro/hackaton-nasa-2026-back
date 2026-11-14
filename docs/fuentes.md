@@ -78,8 +78,9 @@ Se usa **en lugar de Open-Meteo** para las 345 comunas: el plan gratis de Open-M
 
 - The data was obtained from National Aeronautics and Space Administration (NASA) Langley Research Center's
   Prediction Of Worldwide Energy Resources (POWER) project funded through the NASA Earth Science Division.
-- The data was obtained from the POWER Project's Daily 2.x.x version on 2026/11/14. *(Confirmar el número de versión
-  exacto en la página de POWER antes de publicar.)*
+- The data was obtained from the POWER Project's Daily 2.10.3 version on 2026/11/14.
+  *(Versión leída de la propia respuesta de la API: `header.api` = `POWER Daily API`, `v2.10.3`; fuentes `MERRA2` y
+  `POWER`; título `NASA/POWER Source Native Resolution Daily Data`.)*
 
 ## 3. Biblioteca del Congreso Nacional (BCN): límites comunales
 

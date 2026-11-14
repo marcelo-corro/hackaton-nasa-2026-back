@@ -29,8 +29,10 @@ BCN_CITA = (
 POWER_CITA = (
     "The data was obtained from National Aeronautics and Space Administration (NASA) Langley Research Center's "
     "Prediction Of Worldwide Energy Resources (POWER) project funded through the NASA Earth Science Division. "
+    "The data was obtained from the POWER Project's Daily 2.10.3 version on 2026/11/14. "
     "https://power.larc.nasa.gov/"
 )
+TEXTO_SIN_METRICAS = "Modelo en validación"
 
 RUTAS = [
     ("manifest.json", "Versión del contrato, fecha de generación, período y lista de comunas."),
@@ -125,7 +127,11 @@ def index_html(manifest: dict, riesgo: dict | None = None, metricas: dict | None
         if modelo_usa_clima(riesgo, metricas)
         else ""
     )
-    nota_modelo = str((metricas or {}).get("nota") or "").strip()
+    # Sin métricas publicadas (modelo aún sin validar) se dice así; con métricas, va su nota tal cual.
+    if not metricas or metricas.get("auc") is None:
+        nota_modelo = TEXTO_SIN_METRICAS
+    else:
+        nota_modelo = str(metricas.get("nota") or "").strip()
     limite_modelo = f"<li>{escape(nota_modelo)}</li>" if nota_modelo else ""
 
     return f"""<!doctype html>
