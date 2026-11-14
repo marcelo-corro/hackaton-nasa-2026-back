@@ -7,7 +7,8 @@ import pandas as pd
 import pytest
 from shapely.geometry import box
 
-from firecal.export.contrato import COLUMNAS_FOCOS_CSV, exportar
+from firecal import config
+from firecal.export.contrato import COLUMNAS_FOCOS_CSV, DestinoProtegidoError, exportar, verificar_destino_borrable
 
 EJEMPLOS = Path(__file__).resolve().parents[1] / "contracts" / "ejemplos"
 AHORA = datetime(2026, 11, 15, 3, 0, tzinfo=timezone.utc)
@@ -139,3 +140,50 @@ def test_riesgo_publica_solo_el_valido_para_mas_reciente(insumos, tmp_path):
     assert [i["region_id"] for i in datos["items"]] == ["05101", "05109"]
     assert set(datos["items"][0]) == {"region_id", "prob_foco", "percentil", "nivel"}
     assert _leer(tmp_path / "metricas.json")["auc"] == 0.79
+
+
+# --- exportar no debe vaciar carpetas peligrosas ------------------------------------------------------
+
+
+def test_se_niega_a_vaciar_una_carpeta_con_git(insumos, tmp_path):
+    repo = tmp_path / "clon"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "importante.txt").write_text("no borrar", encoding="utf-8")
+    with pytest.raises(DestinoProtegidoError, match=r"\.git"):
+        exportar(*insumos, repo, ahora=AHORA)
+    assert (repo / "importante.txt").exists() and (repo / ".git").is_dir()
+
+
+@pytest.fixture()
+def raiz_falsa(tmp_path, monkeypatch):
+    """Proyecto de mentira en una carpeta temporal: así un fallo de la protección no puede borrar el repo real."""
+    raiz = tmp_path / "proyecto"
+    (raiz / "src").mkdir(parents=True)
+    (raiz / "pyproject.toml").write_text("[project]", encoding="utf-8")
+    monkeypatch.setattr(config, "RAIZ", raiz)
+    return raiz
+
+
+def test_se_niega_a_vaciar_la_raiz_del_proyecto_y_las_carpetas_que_la_contienen(raiz_falsa):
+    for carpeta in (raiz_falsa, raiz_falsa.parent, raiz_falsa / "src" / ".."):  # ".." se resuelve antes de comparar
+        with pytest.raises(DestinoProtegidoError, match="raíz del proyecto"):
+            verificar_destino_borrable(carpeta)
+
+
+def test_una_subcarpeta_de_la_raiz_si_se_puede_vaciar(raiz_falsa):
+    verificar_destino_borrable(raiz_falsa / "public")  # no lanza
+
+
+def test_si_se_niega_no_borra_nada_antes_de_fallar(insumos, raiz_falsa):
+    with pytest.raises(DestinoProtegidoError):
+        exportar(*insumos, raiz_falsa, ahora=AHORA)
+    assert (raiz_falsa / "pyproject.toml").read_text(encoding="utf-8") == "[project]" and (raiz_falsa / "src").is_dir()
+
+
+def test_acepta_una_carpeta_normal_existente_y_la_reemplaza(insumos, tmp_path):
+    destino = tmp_path / "public"
+    destino.mkdir()
+    (destino / "viejo.txt").write_text("x", encoding="utf-8")
+    exportar(*insumos, destino, ahora=AHORA)
+    assert not (destino / "viejo.txt").exists() and (destino / "manifest.json").exists()
+    assert (destino / "index.html").exists()

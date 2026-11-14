@@ -80,8 +80,22 @@ def _fila_ruta(ruta: str, descripcion: str) -> str:
     return f"<tr><td>{celda}</td><td>{escape(descripcion)}</td></tr>"
 
 
+def modelo_usa_clima(riesgo: dict | None, metricas: dict | None) -> bool:
+    """True si el modelo publicado usa el bloque de clima.
+
+    `08_riesgo.py` arma el nombre con los bloques de variables (`hgb_firms_v1`, `hgb_firms_clima_v1`), así que
+    basta mirar si "clima" es uno de sus componentes. Sin modelo publicado, no hay clima que citar.
+    """
+    modelo = (riesgo or {}).get("modelo") or (metricas or {}).get("modelo") or ""
+    return "clima" in str(modelo).lower().split("_")
+
+
 def index_html(manifest: dict, riesgo: dict | None = None, metricas: dict | None = None) -> str:
-    """Devuelve el HTML de la portada. `manifest`, `riesgo` y `metricas` son los JSON ya construidos."""
+    """Devuelve el HTML de la portada. `manifest`, `riesgo` y `metricas` son los JSON ya construidos.
+
+    La cita de NASA POWER aparece solo si el modelo publicado usa clima, y la nota sobre lo que el riesgo
+    predice bien o mal es la de `metricas.json` (no un texto fijo).
+    """
     periodo = manifest.get("periodo", {})
     lineas_estado = [
         f"<p><strong>Datos reales de {len(manifest.get('regiones', []))} comunas de Chile</strong> "
@@ -106,6 +120,13 @@ def index_html(manifest: dict, riesgo: dict | None = None, metricas: dict | None
 
     filas = "\n".join(_fila_ruta(r, d) for r, d in RUTAS)
     citas_firms = "\n".join(f"<li>{escape(c)}</li>" for c in FIRMS_CITAS)
+    cita_power = (
+        f"<li><strong>NASA POWER</strong> (clima diario, insumo del modelo de riesgo). {escape(POWER_CITA)}</li>"
+        if modelo_usa_clima(riesgo, metricas)
+        else ""
+    )
+    nota_modelo = str((metricas or {}).get("nota") or "").strip()
+    limite_modelo = f"<li>{escape(nota_modelo)}</li>" if nota_modelo else ""
 
     return f"""<!doctype html>
 <html lang="es">
@@ -150,7 +171,7 @@ Las cifras armonizadas están en <em>focos equivalentes MODIS</em>.</p>
 {citas_firms}
 </ul></li>
 <li><strong>Biblioteca del Congreso Nacional de Chile (BCN)</strong> (límites comunales). {escape(BCN_CITA)}</li>
-<li><strong>NASA POWER</strong> (clima diario, insumo del modelo de riesgo). {escape(POWER_CITA)}</li>
+{cita_power}
 </ul>
 
 <h2>Límites</h2>
@@ -158,7 +179,7 @@ Las cifras armonizadas están en <em>focos equivalentes MODIS</em>.</p>
 <li>Se cuentan <strong>detecciones</strong> de vegetación con confianza nominal o alta, no incendios ni superficie quemada.</li>
 <li>A escala de una comuna y un mes el error de la armonización es alto; conviene mirar agregados y el intervalo
 <code>armonizado_p05</code>–<code>armonizado_p95</code>.</li>
-<li>El riesgo anticipa bien cómo se propaga un incendio ya activo; no predice dónde empieza uno nuevo.</li>
+{limite_modelo}
 </ul>
 
 <p class="suave">Estos archivos se generan automáticamente; no se editan a mano.</p>

@@ -17,6 +17,7 @@ import pandas as pd
 import shapely
 from shapely.geometry import mapping
 
+from firecal import config
 from firecal.export.indice import index_html
 
 VERSION_CONTRATO = "0.2"
@@ -33,6 +34,30 @@ ARCHIVOS = {
     "focos": "focos/{region_id}.csv",
     "metricas": "metricas.json",
 }
+
+
+class DestinoProtegidoError(ValueError):
+    """La carpeta de salida es una que `exportar` nunca debe vaciar."""
+
+
+def verificar_destino_borrable(destino: Path) -> None:
+    """Falla si `destino` tiene `.git`, es la raíz del proyecto o contiene a la raíz del proyecto.
+
+    `exportar` vacía su destino antes de escribir; con un `PUBLIC_DIR` mal puesto (por ejemplo el clon del repo de
+    datos o la carpeta del proyecto) borraría el historial de git o el código.
+    """
+    destino = Path(destino).resolve()
+    raiz = config.RAIZ.resolve()
+    if destino == raiz or destino in raiz.parents:
+        raise DestinoProtegidoError(
+            f"{destino} es la raíz del proyecto o una carpeta que la contiene: no se vacía. "
+            "Revisa PUBLIC_DIR en .env (por defecto ./public)."
+        )
+    if (destino / ".git").exists():
+        raise DestinoProtegidoError(
+            f"{destino} tiene un .git (es un repositorio): no se vacía. "
+            "La salida va a una carpeta aparte (./public); para publicar usa scripts/10_publicar.py."
+        )
 
 
 def _escribir_json(ruta: Path, datos: dict, indent: int | None = None) -> None:
@@ -206,8 +231,12 @@ def exportar(
     datos_metricas: dict | None = None,
     ahora: datetime | None = None,
 ) -> dict:
-    """Escribe todos los archivos del contrato en `destino` (se vacía antes). Devuelve un resumen."""
+    """Escribe todos los archivos del contrato en `destino` (se vacía antes). Devuelve un resumen.
+
+    Se niega (`DestinoProtegidoError`) a vaciar una carpeta con `.git`, la raíz del proyecto o una que la contenga.
+    """
     destino = Path(destino)
+    verificar_destino_borrable(destino)
     if destino.exists():
         shutil.rmtree(destino)
     destino.mkdir(parents=True)

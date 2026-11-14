@@ -1,13 +1,16 @@
 import re
 
-from firecal.export.indice import RUTAS, index_html
+from firecal.export.indice import RUTAS, index_html, modelo_usa_clima
 
 MANIFEST = {
     "contrato": "0.2", "ejemplo": False, "generado_utc": "2026-11-14T19:20:13Z",
     "periodo": {"desde": "2000-11", "hasta": "2025-12"}, "regiones": ["05101", "05109"],
 }
 RIESGO = {"valido_para": "2026-01-01", "horizonte_horas": 24, "modelo": "hgb_firms_v1", "items": [{"region_id": "05101"}]}
-METRICAS = {"auc": 0.827, "periodo_prueba": "2022-2025"}
+NOTA = "Probado en 2022-2025. Para incendios nuevos sus alertas acertaron 14 % & la mayoría empezó sin alerta."
+METRICAS = {"modelo": "hgb_firms_v1", "auc": 0.827, "periodo_prueba": "2022-2025", "nota": NOTA}
+RIESGO_CLIMA = {**RIESGO, "modelo": "hgb_firms_clima_v1"}
+METRICAS_CLIMA = {**METRICAS, "modelo": "hgb_firms_clima_v1"}
 
 
 def test_es_estatico_sin_javascript():
@@ -33,12 +36,43 @@ def test_lista_todas_las_rutas_con_enlace():
     assert 'href="calendario/05109.json"' in html and 'href="focos/05109.csv"' in html
 
 
-def test_incluye_las_tres_citas_obligatorias():
+def test_siempre_incluye_las_citas_de_firms_y_bcn():
+    for riesgo, metricas in ((RIESGO, METRICAS), (RIESGO_CLIMA, METRICAS_CLIMA), ({"items": []}, {"auc": None})):
+        html = index_html(MANIFEST, riesgo, metricas)
+        assert "Fire Information for Resource Management System" in html  # FIRMS
+        assert "10.1016/j.rse.2016.02.054" in html and "10.1016/j.rse.2013.12.008" in html
+        assert "Biblioteca del Congreso Nacional" in html and "bcn.cl/siit/mapas_vectoriales" in html  # BCN
+
+
+def test_cita_de_nasa_power_solo_si_el_modelo_usa_clima():
+    sin_clima = index_html(MANIFEST, RIESGO, METRICAS)  # hgb_firms_v1
+    assert "POWER" not in sin_clima and "power.larc.nasa.gov" not in sin_clima
+
+    con_clima = index_html(MANIFEST, RIESGO_CLIMA, METRICAS_CLIMA)  # hgb_firms_clima_v1
+    assert "Prediction Of Worldwide Energy Resources (POWER)" in con_clima and "power.larc.nasa.gov" in con_clima
+
+
+def test_sin_modelo_publicado_no_cita_power():
+    assert "POWER" not in index_html(MANIFEST, {"items": []}, {"auc": None})
+
+
+def test_modelo_usa_clima_mira_los_componentes_del_nombre():
+    assert modelo_usa_clima(RIESGO_CLIMA, None) and modelo_usa_clima(None, METRICAS_CLIMA)
+    assert not modelo_usa_clima(RIESGO, METRICAS) and not modelo_usa_clima(None, None)
+    assert not modelo_usa_clima({"modelo": "hgb_firms_climatologia_v1"}, None)  # "clima" como parte de otra palabra
+
+
+def test_limites_usa_la_nota_de_metricas_y_no_un_texto_fijo():
     html = index_html(MANIFEST, RIESGO, METRICAS)
-    assert "Fire Information for Resource Management System" in html  # FIRMS
-    assert "10.1016/j.rse.2016.02.054" in html and "10.1016/j.rse.2013.12.008" in html
-    assert "Biblioteca del Congreso Nacional" in html and "bcn.cl/siit/mapas_vectoriales" in html  # BCN
-    assert "Prediction Of Worldwide Energy Resources (POWER)" in html and "power.larc.nasa.gov" in html  # POWER
+    assert "Probado en 2022-2025. Para incendios nuevos sus alertas acertaron 14 % &amp; la mayoría" in html  # escapado
+    assert "anticipa bien cómo se propaga" not in html  # el texto fijo anterior ya no está
+    otra = index_html(MANIFEST, RIESGO, {**METRICAS, "nota": "Otra nota distinta."})
+    assert "Otra nota distinta." in otra and "Probado en 2022-2025" not in otra
+
+
+def test_sin_nota_no_hay_bullet_de_modelo():
+    html = index_html(MANIFEST, RIESGO, {**METRICAS, "nota": None})
+    assert "<li></li>" not in html and "Probado en" not in html
 
 
 def test_muestra_el_estado_real_desde_el_manifest():
