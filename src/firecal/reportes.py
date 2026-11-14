@@ -24,8 +24,10 @@ def tabla_md(df: pd.DataFrame, decimales: int = 2) -> str:
     """DataFrame a tabla Markdown. El índice va como primera columna (años sin separador de miles)."""
     encabezado = [str(df.index.name or "")] + [str(c) for c in df.columns]
     lineas = ["| " + " | ".join(encabezado) + " |", "|" + "---|" * len(encabezado)]
-    for indice, fila in df.iterrows():
+    # itertuples conserva el tipo de cada columna (iterrows convierte las filas mixtas a float).
+    for fila in df.itertuples(index=True, name=None):
+        indice, valores = fila[0], fila[1:]
         partes = indice if isinstance(indice, tuple) else (indice,)
         etiqueta = " / ".join(p.strftime("%Y-%m-%d") if isinstance(p, pd.Timestamp) else str(p) for p in partes)
-        lineas.append("| " + " | ".join([etiqueta] + [formato(v, decimales) for v in fila]) + " |")
+        lineas.append("| " + " | ".join([etiqueta] + [formato(v, decimales) for v in valores]) + " |")
     return "\n".join(lineas)

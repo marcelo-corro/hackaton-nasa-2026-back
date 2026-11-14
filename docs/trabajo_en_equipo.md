@@ -199,7 +199,7 @@ el mes en curso en la demo. Extender el período del contrato a 2026 requiere av
 |---|---|---|
 | A1 · Armonización ✅ **lista** (14-11): factor único calibrado en 2012-2017, validado fuera de muestra con 2016-2017 | `serie_mensual.parquet` definitiva + [`docs/armonizacion.md`](armonizacion.md) | Ya: es la entrada de B2 |
 | A2 · Eventos ✅ **lista** (14-11): agrupar focos en incendios no iguala los sensores (razón 3,2 → 2,3); la diferencia es sobre todo sensibilidad a incendios chicos | Cifras para el pitch en [`docs/eventos.md`](eventos.md) | No la necesita |
-| A3 · Riesgo a 24-48 h, con validación temporal y métricas honestas | `riesgo.parquet` + `metricas.json` | B3 los incluye en la exportación |
+| A3 · Riesgo a 24-48 h ✅ **versión base lista** (14-11), solo con FIRMS; el clima de B5 se suma solo cuando exista `data/interim/clima_diario.parquet` | `riesgo.parquet` + `metricas.json` (corre `scripts/08_riesgo.py`) + [`docs/riesgo.md`](riesgo.md) | Ya: B3 puede exportarlos |
 | A4 · Cifras y gráficos para el pitch | `docs/` | — |
 
 ## 8. Reglas de trabajo

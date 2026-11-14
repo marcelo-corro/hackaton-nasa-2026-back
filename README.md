@@ -36,6 +36,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/04_marcar_calidad.py      # marcas de calidad + docs/calidad_datos.md
 .venv/Scripts/python scripts/05_armonizar.py           # serie armonizada + docs/armonizacion.md
 .venv/Scripts/python scripts/06_eventos.py             # focos vs incendios + docs/eventos.md (opcional)
+.venv/Scripts/python scripts/08_riesgo.py              # modelo de riesgo + docs/riesgo.md (~1,5 min)
 ```
 
 Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usa
@@ -70,7 +71,7 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 5. Armonización MODIS ↔ VIIRS | `scripts/05_armonizar.py`, `firecal.harmonize` | A | Listo ([reporte](docs/armonizacion.md)) |
 | 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Listo ([reporte](docs/eventos.md)) |
 | 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Pendiente (B2) |
-| 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Pendiente (A3; necesita B5) |
+| 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Base con FIRMS lista ([reporte](docs/riesgo.md)); suma el clima de B5 cuando exista |
 | 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Pendiente (B3) |
 | 10. Publicar en GitHub Pages | `scripts/10_publicar.py` | B | Repo y Pages listos con ejemplos; falta el script (B4) |
 
