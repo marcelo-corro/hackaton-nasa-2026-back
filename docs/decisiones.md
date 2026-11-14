@@ -4,6 +4,12 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
 ## 2026-11-14
 
+- **Eventos (A2):** la hipótesis de que contar incendios en vez de focos iguala los sensores se cumple solo en
+  parte: la razón Suomi NPP / MODIS baja de 3,2 a 2,3 (2013-2017) y queda entre 1,8 y 2,3 con cualquier
+  definición razonable. La diferencia es sobre todo sensibilidad: MODIS ve el 11 % de los incendios de un foco que ve
+  VIIRS y el 100 % de los de más de 50. La deriva de MODIS también se ve en incendios grandes (92 % → 78 % entre
+  2012-2020 y 2024-2025). Se mantiene la armonización por calibración; los eventos quedan como evidencia para el
+  pitch. Detalle: `docs/eventos.md`.
 - **Armonización (A1):** unidad "focos equivalentes MODIS". Regla por período: Terra convertido a Terra + Aqua
   hasta 2002-06; MODIS observado 2002-07 a 2017-12; VIIRS Suomi NPP convertido desde 2018-01 (MODIS cambia de
   procesamiento en 2018 y su órbita se desvía: cuenta 8-24 % menos de lo esperado). Se compararon 8 métodos fuera

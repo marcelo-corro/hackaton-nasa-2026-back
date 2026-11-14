@@ -35,6 +35,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/03_asignar_comunas.py     # ~1 min la primera vez
 .venv/Scripts/python scripts/04_marcar_calidad.py      # marcas de calidad + docs/calidad_datos.md
 .venv/Scripts/python scripts/05_armonizar.py           # serie armonizada + docs/armonizacion.md
+.venv/Scripts/python scripts/06_eventos.py             # focos vs incendios + docs/eventos.md (opcional)
 ```
 
 Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usa
@@ -67,7 +68,7 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 4. Marcar calidad + fecha local | `scripts/04_marcar_calidad.py`, `firecal.calidad` | — | Listo ([reporte](docs/calidad_datos.md)) |
 | 5p. Serie mensual provisional | `scripts/05p_serie_provisional.py` | B | Ya no hace falta (la serie armonizada existe) |
 | 5. Armonización MODIS ↔ VIIRS | `scripts/05_armonizar.py`, `firecal.harmonize` | A | Listo ([reporte](docs/armonizacion.md)) |
-| 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Pendiente (A2, hipótesis) |
+| 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Listo ([reporte](docs/eventos.md)) |
 | 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Pendiente (B2) |
 | 8. Riesgo 24-48 h | `scripts/08_riesgo.py`, `firecal.model` | A | Pendiente (A3; necesita B5) |
 | 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Pendiente (B3) |
