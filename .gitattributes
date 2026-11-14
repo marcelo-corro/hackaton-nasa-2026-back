@@ -1,0 +1,6 @@
+# Finales de línea iguales para todo el equipo (Windows, Mac, Linux)
+* text=auto eol=lf
+*.ipynb text eol=lf
+*.png binary
+*.jpg binary
+*.parquet binary

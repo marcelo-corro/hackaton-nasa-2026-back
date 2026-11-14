@@ -1,0 +1,22 @@
+{
+  "contrato": "0.1",
+  "ejemplo": true,
+  "calculado_utc": "2026-11-14T00:00:00Z",
+  "valido_para": "2026-11-15",
+  "horizonte_horas": 24,
+  "modelo": "ejemplo (números inventados)",
+  "items": [
+    {
+      "region_id": "05101",
+      "prob_foco": 0.08,
+      "percentil": 61,
+      "nivel": "medio"
+    },
+    {
+      "region_id": "05109",
+      "prob_foco": 0.21,
+      "percentil": 88,
+      "nivel": "alto"
+    }
+  ]
+}

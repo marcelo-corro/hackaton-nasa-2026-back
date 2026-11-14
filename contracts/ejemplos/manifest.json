@@ -1,0 +1,20 @@
+{
+  "contrato": "0.1",
+  "ejemplo": true,
+  "generado_utc": "2026-11-14T00:00:00Z",
+  "periodo": {
+    "desde": "2000-11",
+    "hasta": "2025-12"
+  },
+  "regiones": [
+    "05101",
+    "05109"
+  ],
+  "archivos": {
+    "regiones": "regiones.geojson",
+    "calendario": "calendario/{region_id}.json",
+    "riesgo": "riesgo/ultimo.json",
+    "focos": "focos/{region_id}.csv",
+    "metricas": "metricas.json"
+  }
+}

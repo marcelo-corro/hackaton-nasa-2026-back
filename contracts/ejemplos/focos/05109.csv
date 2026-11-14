@@ -1,0 +1,4 @@
+fecha,hora_utc,lat,lon,sensor,satelite,confianza,frp,tipo
+2024-02-02,0315,-33.0233,-71.56,MODIS,Terra,alta,38.4,0
+2024-02-02,0600,-33.073,-71.5771,VIIRS,SNPP,nominal,47.3,0
+2024-02-03,1830,-33.04,-71.4994,VIIRS,SNPP,alta,27.8,0

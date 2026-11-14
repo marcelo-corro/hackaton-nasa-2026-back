@@ -1,0 +1,77 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "region_id": "05101",
+        "nombre": "Valparaíso",
+        "region": "Valparaíso",
+        "pais": "CL"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -71.75,
+              -33.2
+            ],
+            [
+              -71.55,
+              -33.2
+            ],
+            [
+              -71.55,
+              -33.0
+            ],
+            [
+              -71.75,
+              -33.0
+            ],
+            [
+              -71.75,
+              -33.2
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region_id": "05109",
+        "nombre": "Viña del Mar",
+        "region": "Valparaíso",
+        "pais": "CL"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -71.58,
+              -33.08
+            ],
+            [
+              -71.45,
+              -33.08
+            ],
+            [
+              -71.45,
+              -32.95
+            ],
+            [
+              -71.58,
+              -32.95
+            ],
+            [
+              -71.58,
+              -33.08
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

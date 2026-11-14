@@ -1,0 +1,26 @@
+# Datos y salidas: no se versionan (ver data/README.md)
+data/*
+!data/README.md
+public/
+*.parquet
+
+# Secretos: nunca al repo
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
