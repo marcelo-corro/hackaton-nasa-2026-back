@@ -199,7 +199,8 @@ el mes en curso en la demo. Extender el período del contrato a 2026 requiere av
 |---|---|---|
 | A1 · Armonización ✅ **lista** (14-11): factor único calibrado en 2012-2017, validado fuera de muestra con 2016-2017 | `serie_mensual.parquet` definitiva + [`docs/armonizacion.md`](armonizacion.md) | Ya: es la entrada de B2 |
 | A2 · Eventos ✅ **lista** (14-11): agrupar focos en incendios no iguala los sensores (razón 3,2 → 2,3); la diferencia es sobre todo sensibilidad a incendios chicos | Cifras para el pitch en [`docs/eventos.md`](eventos.md) | No la necesita |
-| A3 · Riesgo a 24-48 h ✅ **listo con clima** (14-11): `hgb_firms_clima_v1`, AUC 0,837 en 2022-2025; necesita `data/interim/clima_diario.parquet` (paso 5b o Drive del equipo) | `riesgo.parquet` + `metricas.json` (corre `scripts/08_riesgo.py`) + [`docs/riesgo.md`](riesgo.md) | Ya: B3 puede exportarlos |
+| A3 · Riesgo a 24 h, 48 h y 7 días ✅ (14-11, noche): `hgb_firms_clima_v3` (14 variables, sin fuga), 24 h AUC 0,846 en 2022-2025; 7 días orientativo; necesita `data/interim/clima_diario.parquet` | `riesgo.parquet` (3 horizontes) + `metricas.json` + `riesgo_horizontes.json` + [`docs/riesgo.md`](riesgo.md) | Ya: B3 los exporta (`09` + `13`) |
+| A5 · Piloto de sectores, Región de Valparaíso ✅ (14-11, noche) | `scripts/11`-`13`, [`docs/sectores.md`](sectores.md); en `public/`: `sectores/`, `alertas/05.json`, `riesgo/48h.json`, `riesgo/7d.json`, `recomendaciones.json` (contrato v0.3) | F: vista P3b de `guia_front.md` |
 | A4 · Cifras y gráficos para el pitch | `docs/` | — |
 
 ## 8. Reglas de trabajo

@@ -1,8 +1,12 @@
-# Contrato back → front · versión 0.2
+# Contrato back → front · versión 0.3
 
 > Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
 
 **Cambios**
+- 0.3 (14-11-2026): **aditivo** (los archivos de la 0.2 no cambian de forma). Suma riesgo a 48 h y 7 días y el piloto
+  de sectores de la Región de Valparaíso: `riesgo/48h.json`, `riesgo/7d.json`, `sectores/{region_id}.geojson`,
+  `sectores/{region_id}_focos.csv`, `alertas/{codigo_region}.json`, `recomendaciones.json`. El manifest agrega sus
+  rutas en `archivos` y la lista de comunas con sectores en `sectores.regiones`. Detalle al final.
 - 0.2 (14-11-2026): `calendario` agrega `mediana_historica` por registro (el desafío pide comparar el mes
   actual con la mediana histórica).
 - 0.1 (14-11-2026): primera versión.
@@ -32,7 +36,7 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
 
 ```json
 {
-  "contrato": "0.2",
+  "contrato": "0.3",
   "ejemplo": false,
   "generado_utc": "2026-11-15T03:00:00Z",
   "periodo": {"desde": "2000-11", "hasta": "2025-12"},
@@ -56,7 +60,7 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
 
 ```json
 {
-  "contrato": "0.2",
+  "contrato": "0.3",
   "ejemplo": false,
   "region_id": "05109",
   "nombre": "Viña del Mar",
@@ -85,7 +89,7 @@ Cualquier cambio de forma sube la versión (`"contrato"`) y se avisa al front an
 
 ```json
 {
-  "contrato": "0.2",
+  "contrato": "0.3",
   "ejemplo": false,
   "calculado_utc": "2026-11-15T03:00:00Z",
   "valido_para": "2026-11-15",
@@ -115,7 +119,7 @@ Columnas, en este orden: `fecha,hora_utc,lat,lon,sensor,satelite,confianza,frp,t
 
 ```json
 {
-  "contrato": "0.2",
+  "contrato": "0.3",
   "ejemplo": false,
   "modelo": "riesgo_24h_v1",
   "periodo_prueba": "2022-2025",
@@ -127,3 +131,94 @@ Columnas, en este orden: `fecha,hora_utc,lat,lon,sensor,satelite,confianza,frp,t
 ```
 
 Mientras no haya modelo validado, las métricas van en `null` y el front muestra "pendiente".
+
+---
+
+## v0.3 · Riesgo a 48 h y 7 días y sectores (piloto Región de Valparaíso)
+
+En `manifest.json`:
+
+```json
+"archivos": {"...": "...", "riesgo_48h": "riesgo/48h.json", "riesgo_7d": "riesgo/7d.json",
+             "sectores": "sectores/{region_id}.geojson", "sectores_focos": "sectores/{region_id}_focos.csv",
+             "alertas": "alertas/{codigo_region}.json", "recomendaciones": "recomendaciones.json"},
+"sectores": {"codigo_region": "05", "regiones": ["05101", "05109", "..."]}
+```
+
+Solo las comunas de `sectores.regiones` tienen archivos de sectores. Si `sectores` no está en el manifest, el piloto no
+se publicó y el front oculta esa vista.
+
+### riesgo/48h.json y riesgo/7d.json
+
+Misma forma que `riesgo/ultimo.json` (todas las comunas del país), más:
+
+```json
+{
+  "valido_para": "2026-01-01", "valido_hasta": "2026-01-07", "horizonte_horas": 168,
+  "umbrales": {"muy_alto": 0.7914, "alto": 0.5233, "medio": 0.2281, "bajo": 0.0},
+  "metricas": {"periodo_prueba": "2022-2025", "auc": 0.817, "precision_media": 0.490, "captura_top10": 0.345,
+               "tasa_base": 0.163, "precision_media_climatologia": 0.444, "ventaja_sobre_climatologia": 1.103},
+  "orientativo": true,
+  "nota": "Probabilidad de al menos un foco en la comuna en los próximos 7 días. Orientativa: ..."
+}
+```
+
+- `prob_foco`: probabilidad de al menos un foco en la comuna entre `valido_para` y `valido_hasta`.
+- `nivel` usa los `umbrales` de ESE horizonte (no los de 24 h): cada nivel agrupa la misma proporción de días-comuna
+  que a 24 h. **No comparar probabilidades entre horizontes**: a 7 días siempre son más altas.
+- `orientativo: true` → mostrar el aviso de `nota` (a 7 días el modelo supera poco a la climatología).
+
+### sectores/{region_id}.geojson
+
+`FeatureCollection` (WGS84) con un `Feature` por sector (celda de 1 km recortada a la comuna). `properties`:
+
+| Campo | Tipo | Qué es |
+|---|---|---|
+| `sector_id` | string | `{region_id}_{ix}_{iy}` |
+| `area_km2`, `lat`, `lon` | número | superficie y un punto dentro del sector |
+| `rasgos` | lista | códigos de `recomendaciones.json → rasgos` (ej. `["interfaz", "pastizal", "historial"]`) |
+| `exposicion` | 0-5 | n.º de rasgos de exposición. **Descriptivo**: no ordena ni es probabilidad |
+| `pct_interfaz`, `pct_pastizal`, `pct_bosque_matorral`, `pct_cultivo`, `pct_construido` | 0-100 o `null` | % del sector |
+| `pendiente_media` | grados | |
+| `dias_con_fuego`, `focos`, `incendios_grandes`, `mayor_incendio_focos` | entero | historial 2012-2025 (VIIRS Suomi NPP) |
+| `ultimo_fuego` | `YYYY-MM-DD` o `null` | |
+| `recomendaciones` | objeto | `{"24": [...], "48": [...], "168": [...]}`: códigos de recomendación según el nivel de la comuna en cada horizonte |
+
+**El sector no tiene probabilidad.** Para colorear el mapa usar el historial (`dias_con_fuego`) o un rasgo, con la
+leyenda "historial" o "qué hay en el sector", nunca "probabilidad".
+
+### sectores/{region_id}_focos.csv
+
+Para el heatmap. Columnas: `fecha,lat,lon,frp,focos_incendio,sector_id` (VIIRS Suomi NPP 2012-2025, sin fuentes
+industriales persistentes). `focos_incendio` = tamaño del incendio al que pertenece el foco (> 10 = grande).
+
+### alertas/{codigo_region}.json
+
+```json
+{
+  "codigo_region": "05", "nota": "Orden de prioridad: ...",
+  "horizontes": {"24": [{"sector_id": "05102_-1018_-188", "region_id": "05102", "comuna": "Casablanca",
+                         "nivel_comuna": "alto", "prob_foco_comuna": 0.125, "exposicion": 2,
+                         "rasgos": ["pastizal", "historial"], "lat": -33.289, "lon": -71.394,
+                         "recomendaciones": ["avisar_130", "sin_quemas_05", "sin_colillas"]}],
+                 "48": [], "168": []},
+  "comunas": [{"region_id": "05101", "nombre": "Valparaíso",
+               "riesgo": {"24": {"prob_foco": 0.01, "nivel": "bajo"}, "48": {}, "168": {}},
+               "clima_ultimo_dia": {"fecha_clima": "2025-12-31", "tmax": 18.8, "tmax_percentil": 84, "hrmin": 80,
+                                    "hrmin_percentil": 93, "viento_max": 4.8, "viento_percentil": 9,
+                                    "dias_sin_lluvia": 88, "dias_sin_lluvia_percentil": 50, "condiciones": []}}],
+  "caso": {"fecha": "2024-02-04", "items": [{"...": "...", "tuvo_fuego_ese_dia": false}],
+           "sectores_con_fuego_ese_dia": ["..."]}
+}
+```
+
+- Listas en orden de prioridad (hasta 25, máximo 5 por comuna): comunas con mayor nivel y probabilidad; dentro, sectores
+  con más días con fuego previos y, a igualdad, más interfaz. **No** es la probabilidad de que ese sector se queme.
+- `condiciones`: códigos `calor`, `aire_seco`, `viento`, `sin_lluvia` (percentil extremo contra el mismo mes).
+- `caso`: cómo se habría visto la lista el 4-feb-2024 y qué sectores tuvieron fuego. Ese día ninguno de la lista lo
+  tuvo (ver `docs/sectores.md`): si se muestra, mostrarlo así.
+
+### recomendaciones.json
+
+`rasgos` (código → texto), `recomendaciones` (código → `{texto, fuente}`), `fuentes` (código → `{nombre, url}`),
+`umbrales_rasgos` y `fuentes_capas`. El front muestra el texto y enlaza la fuente; no inventa recomendaciones.

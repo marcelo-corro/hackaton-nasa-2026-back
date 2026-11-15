@@ -51,6 +51,22 @@ esa comuna, deja descargar los focos y, si alcanza, muestra el riesgo para maña
   "Modelo en validación".
 - Aviso visible: el modelo anticipa bien la **propagación** de incendios activos, no dónde **empieza** uno.
 
+### P3b · Sectores de la comuna (piloto Región de Valparaíso, contrato v0.3)
+Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el contrato, sección v0.3.
+- **Selector de horizonte:** 24 h (`riesgo/ultimo.json`), 48 h (`riesgo/48h.json`), 7 días (`riesgo/7d.json`). Si el
+  archivo trae `orientativo: true`, mostrar su `nota` junto al mapa. No comparar probabilidades entre horizontes.
+- **Mapa de la comuna:** color de la comuna por `nivel` del horizonte elegido; encima, los sectores
+  (`sectores/{id}.geojson`) y el heatmap de focos (`sectores/{id}_focos.csv`). Capas para elegir: historial
+  (`dias_con_fuego`), interfaz (`pct_interfaz`), pastizal, bosque/matorral, pendiente. **Leyenda: "historial" o
+  "qué hay en el sector", nunca "probabilidad del sector"** (el sector no tiene probabilidad; ver `docs/sectores.md`).
+- **Ficha del sector (al hacer clic):** rasgos en texto (`recomendaciones.json → rasgos`), % de cada capa, días con
+  fuego y último fuego, y las recomendaciones del horizonte elegido (`recomendaciones[horizonte]`) con el enlace a
+  su fuente oficial.
+- **Alertas arriba:** `alertas/05.json → horizontes[h]`, en el orden en que vienen; mostrar `nota`. Junto a cada
+  comuna, las condiciones del clima (`comunas[].clima_ultimo_dia.condiciones`: calor, aire seco, viento, sin lluvia).
+- **Caso 2024 (opcional):** `caso` muestra la lista del 4-feb-2024 y qué sectores tuvieron fuego (ninguno de la lista
+  lo tuvo). Si se usa, contarlo así: el riesgo por comuna acertó (Viña `muy_alto`), la ubicación dentro de la comuna no.
+
 ### P4 · Acerca de y fuentes
 - Qué hace la app y el método en 4-5 líneas (por qué hay que armonizar: los satélites MODIS se desvían de órbita
   y VIIRS ve más; el conteo cambia por el satélite, no por el fuego).
@@ -178,7 +194,7 @@ ejemplo a datos reales; basta recargar.
 | 1 · Provisional | Las 345 comunas con datos reales y serie provisional (`metodo` empieza con `provisional`) | Sábado en la noche (lo publica David) |
 | 2 · Armonizada | La serie armonizada definitiva | Domingo en la mañana |
 
-### Rutas (detalle de cada campo en el [contrato v0.2](../contracts/README.md))
+### Rutas (detalle de cada campo en el [contrato v0.3](../contracts/README.md); las de sectores, en P3b)
 
 | Ruta | Contenido |
 |---|---|

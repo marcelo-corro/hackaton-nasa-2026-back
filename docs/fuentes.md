@@ -97,6 +97,37 @@ Se usa **en lugar de Open-Meteo** para las 345 comunas: el plan gratis de Open-M
 **Cita:** Biblioteca del Congreso Nacional de Chile. *División comunal: polígonos de las comunas de Chile*
 [shapefile]. Mapas vectoriales, https://www.bcn.cl/siit/mapas_vectoriales (consultado el 14-11-2026).
 
+## 3b. Capas del piloto de sectores (Región de Valparaíso)
+
+Bajadas el 14-11-2026 con `scripts/11_descargar_capas.py` (URL, tamaño y SHA-256 en `data/raw/registro_descargas.csv`).
+Solo los bloques que tocan las 36 comunas continentales de la región.
+
+| Capa | Qué es | URL | Licencia / condición |
+|---|---|---|---|
+| ESA WorldCover 2021 v200 | Cobertura del suelo a 10 m, 11 clases (árboles, matorral, pastizal, cultivo, construido...). No separa bosque nativo de plantación | `https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/` (bloques S36W072 y S33W072) | CC BY 4.0 |
+| Copernicus DEM GLO-30 | Elevación a 30 m (para la pendiente) | `https://copernicus-dem-30m.s3.amazonaws.com/` (6 bloques de 1°) | Licencia Copernicus DEM: uso libre con la atribución de abajo |
+| WUI global (Schug et al. 2023) v1.1 | Interfaz urbano-forestal a 10 m, ~2020, 8 clases (1-4 WUI) | `https://zenodo.org/records/7941460` (zip `SA.zip`; se leyeron solo 9 bloques por rango HTTP, 12 MB de 1,7 GB) | CC BY 4.0 |
+
+**Citas:**
+- Zanaga, D. et al. (2022). *ESA WorldCover 10 m 2021 v200*. Zenodo. https://doi.org/10.5281/zenodo.7254221
+- Copernicus DEM: "produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH
+  2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved".
+- Schug, F. et al. (2023). The global wildland–urban interface. *Nature*. https://doi.org/10.1038/s41586-023-06320-0 ·
+  datos: https://doi.org/10.5281/zenodo.7941460
+
+## 3c. Recomendaciones oficiales (textos de la app)
+
+Las recomendaciones por sector (`src/firecal/sectores/recomendaciones.py`, publicadas en `recomendaciones.json`) son
+textos generales tomados de estas fuentes. Donde no se pudo leer el documento completo, la recomendación no lleva cifras.
+
+| Fuente | URL | Qué se toma | Leído |
+|---|---|---|---|
+| CONAF, situación del uso del fuego como quema controlada | https://www.conaf.cl/actualizacion-situacion-uso-del-fuego-en-regiones/ | Región de Valparaíso: uso del fuego restringido en toda la región hasta el 31-05-2027; Comprobante de Aviso de Quema; sin quemas fines de semana y festivos | Completo (14-11-2026) |
+| CONAF, sitio oficial | https://www.conaf.cl/ | Número de emergencias 130 (pie de página) | Sí (14-11-2026) |
+| SENAPRED, *Prepárate con SENAPRED: incendios forestales* | https://bibliogrd.senapred.gob.cl/bitstream/handle/1671/8866/06_preparate_con_senapred_incendios_forestales_esp.pdf | Mantener despejados los alrededores de la vivienda; no fumar ni botar colillas cerca de vegetación; evitar quemas | Por buscador (PDF no legible en el PC del hackatón): verificar antes de citar en el pitch |
+| MINVU, *Chile se prepara: barrios* (2024) | https://www.minvu.gob.cl/wp-content/uploads/2024/12/DIPTICO-chile-se-prepara-BARRIOS.pdf | Comité y plan de prevención con la junta de vecinos, zonas seguras, rutas de evacuación | Por buscador: verificar |
+| CONAF, programa Comunidad Preparada | https://www.conaf.cl/conaf-desarrolla-el-programa-comunidad-preparada-frente-a-los-incendios-forestales-con-vecinos-y-vecinas-de-zonas-de-interfaz/ | Talleres para vecinos de zonas de interfaz | Por buscador: verificar |
+
 ## 4. Fuentes documentales de los informes
 
 Los informes del equipo citan noticias, leyes, planes comunales y documentación técnica. Su registro completo
@@ -108,8 +139,11 @@ Los informes del equipo citan noticias, leyes, planes comunales y documentación
 Cada una entra a esta lista recién cuando se descargue y se use:
 
 - Focos casi en tiempo real de 2026 (FIRMS Area API, requiere MAP_KEY).
-- NDVI, temperatura de superficie, cobertura de suelo y relieve (Microsoft Planetary Computer).
-- Pronóstico (ECMWF Open Data o Meteomatics).
+- NDVI y temperatura de superficie (cobertura de suelo y relieve ya están: sección 3b).
+- Pronóstico del tiempo (Open-Meteo o ECMWF Open Data): medido, a 7 días no se justifica (`docs/decisiones.md`); a
+  24 h, solo con focos en tiempo real.
+- MapBiomas Chile (cobertura con plantaciones forestales) y MapBiomas Fuego (área quemada), para separar plantación
+  de bosque nativo y clasificar incendios por tamaño.
 - Catálogo de focos y áreas quemadas de CONAE (autor del desafío).
 
 ## 6. Herramientas de IA

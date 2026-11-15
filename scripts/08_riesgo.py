@@ -1,14 +1,16 @@
-"""Paso 8 del pipeline (A): riesgo de focos a 24-48 h por comuna.
+"""Paso 8 del pipeline (A): riesgo de focos por comuna a 24 h, 48 h y 7 días.
 
-Objetivo: ¿habrá al menos un foco VIIRS (Suomi NPP, `uso_base`) en la comuna mañana (24 h) / en 2 días (48 h)?
-Partición temporal: entrena 2012-02..2019, calibra 2020-2021, prueba 2022-2025 (incluye 2023 y Viña 2024).
+Objetivo: ¿habrá al menos un foco VIIRS (Suomi NPP, `uso_base`) en la comuna mañana (24 h), en 2 días (48 h) o en
+la próxima semana (7 días)? Partición temporal: entrena 2012-02..2019, calibra 2020-2021, prueba 2022-2025.
 
-Compara: climatología (comuna × mes), persistencia, regresión logística y gradient boosting con los bloques de
-variables disponibles (FIRMS siempre; clima si existe data/interim/clima_diario.parquet). Elige por precisión media
-en calibración, mide en prueba por separado ignición (sin focos en 3 días) y propagación (con focos recientes).
+Compara (a 24 h): climatología (comuna × mes), persistencia, regresión logística y gradient boosting con los bloques
+de variables disponibles (FIRMS siempre; clima si existe data/interim/clima_diario.parquet). Elige por precisión
+media en calibración, mide en prueba por separado ignición (sin focos en 3 días) y propagación (con focos recientes).
+Los modelos de 48 h y 7 días usan las mismas variables y se comparan con la climatología de su propio horizonte.
 
-Salidas: data/processed/riesgo.parquet (contrato), data/processed/metricas.json, data/processed/riesgo_backtest.parquet,
-data/processed/modelo_riesgo_24h.joblib, docs/riesgo.md y docs/figuras/riesgo_vina_2024.png.
+Salidas: data/processed/riesgo.parquet (contrato; una fila por comuna y horizonte), data/processed/metricas.json,
+data/processed/riesgo_horizontes.json, data/processed/riesgo_backtest.parquet, data/processed/modelo_riesgo_24h.joblib,
+docs/riesgo.md y docs/figuras/riesgo_vina_2024.png.
 
 Uso:
     python scripts/08_riesgo.py
@@ -43,7 +45,8 @@ from firecal import config  # noqa: E402
 from firecal.contratos import validar_riesgo  # noqa: E402
 from firecal.model.evaluar import confiabilidad, curva_captura, metricas, por_segmento  # noqa: E402
 from firecal.model.variables import (  # noqa: E402
-    VARIABLES_CLIMA, VARIABLES_CLIMATOLOGIA, VARIABLES_FIRMS, agregar_climatologia, bloque_clima, tabla_base,
+    VARIABLES_CLIMATOLOGIA, VARIABLES_MODELO_CLIMA, VARIABLES_MODELO_FIRMS, agregar_climatologia, bloque_clima,
+    tabla_base,
 )
 from firecal.reportes import tabla_md  # noqa: E402
 
@@ -56,11 +59,44 @@ NOMBRES_METRICAS = {"auc": "AUC", "precision_media": "Precisión media", "captur
                     "lift_top10": "Lift top 10 %", "brier": "Brier", "tasa_base": "Tasa base"}
 
 
-def nivel(p: np.ndarray) -> np.ndarray:
+HORIZONTES = {"y24": (24, 1), "y48": (48, 2), "y7d": (168, 7)}  # objetivo: (horas, días)
+
+
+def nivel(p: np.ndarray, niveles: list[tuple[float, str]] = NIVELES) -> np.ndarray:
     out = np.full(len(p), "bajo", dtype=object)
-    for umbral, nombre in reversed(NIVELES):
+    for umbral, nombre in reversed(niveles):
         out[np.asarray(p) >= umbral] = nombre
     return out
+
+
+def umbrales_equivalentes(p_cal_24: np.ndarray, p_cal_h: np.ndarray) -> list[tuple[float, str]]:
+    """Umbrales de nivel para otro horizonte: en calibración, cada nivel agrupa la misma proporción de días-comuna
+    que a 24 h. Con los umbrales fijos de 24 h, a 7 días (tasa base ~18 %) casi todo saldría "alto"."""
+    out = []
+    for umbral, nombre in NIVELES:
+        if umbral == 0:
+            out.append((0.0, nombre))
+            continue
+        sobre = float((p_cal_24 >= umbral).mean())
+        out.append((round(float(np.quantile(p_cal_h, 1 - sobre)), 4), nombre))
+    return out
+
+
+def entrenar_horizonte(tabla: pd.DataFrame, objetivo: str, dias: int, cols: list[str], ent: pd.Series,
+                       cal: pd.Series, prueba: pd.Series) -> dict:
+    """Modelo calibrado para un horizonte. Deja fuera las filas cuyo objetivo mira dentro del período siguiente."""
+    margen = pd.Timedelta(days=dias - 1)
+    con_y = tabla[objetivo].notna()
+    E = tabla[ent & con_y & (tabla["fecha"] <= pd.Timestamp(FIN_ENTRENAMIENTO) - margen)]
+    C = tabla[cal & con_y & (tabla["fecha"] <= pd.Timestamp(FIN_CALIBRACION) - margen)]
+    P = tabla[prueba & con_y]
+    m = hgb().fit(E[cols], E[objetivo])
+    iso = calibrar(m.predict_proba(C[cols])[:, 1], C[objetivo])
+    clim = E.groupby(["region_id", "mes"])[objetivo].mean().rename("clim_h")
+    clim_p = P[["region_id", "mes"]].join(clim, on=["region_id", "mes"])["clim_h"].fillna(E[objetivo].mean())
+    p = iso.predict(m.predict_proba(P[cols])[:, 1])
+    return {"modelo": m, "calibrador": iso, "p_cal": iso.predict(m.predict_proba(C[cols])[:, 1]),
+            "modelo_prueba": metricas(P[objetivo], p), "clim_prueba": metricas(P[objetivo], clim_p)}
 
 
 def log_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -152,7 +188,7 @@ def main() -> int:
     prueba = tabla["fecha"] > FIN_CALIBRACION
     tabla = agregar_climatologia(tabla, ent)
 
-    variables = VARIABLES_FIRMS + VARIABLES_CLIMATOLOGIA
+    variables = VARIABLES_MODELO_FIRMS + VARIABLES_CLIMATOLOGIA
     bloques = ["FIRMS"]
     clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet")
     if clima is not None:
@@ -180,7 +216,7 @@ def main() -> int:
     # Gradient boosting por conjunto de bloques
     conjuntos = {"Gradient boosting (FIRMS)": variables}
     if "clima" in bloques:
-        conjuntos["Gradient boosting (FIRMS + clima)"] = variables + VARIABLES_CLIMA
+        conjuntos["Gradient boosting (FIRMS + clima)"] = variables + VARIABLES_MODELO_CLIMA
     modelos = {}
     for nombre, cols in conjuntos.items():
         print(f"Entrenando {nombre}...")
@@ -196,7 +232,9 @@ def main() -> int:
     elegido = max(conjuntos, key=lambda n: val_ap[n])
     modelo, iso, cols = modelos[elegido]
     p_prueba = calibradas[elegido]
-    nombre_modelo = "hgb_" + "_".join(b.lower() for b in bloques) + "_v1"
+    # v2: climatología sin fuga de objetivo (cada año de entrenamiento se calcula con los otros años; no se publicó)
+    # v3: v2 + 14 variables (de 23) + horizontes de 48 h y 7 días publicados
+    nombre_modelo = "hgb_" + "_".join(b.lower() for b in bloques) + "_v3"
     print(f"Elegido (precisión media en calibración): {elegido}")
 
     # Segmentos ignición / propagación
@@ -227,15 +265,25 @@ def main() -> int:
     tabla_alertas = pd.DataFrame(filas_alerta).T.astype({"Días-comuna": int, "Alertas (alto o muy alto)": int})
     tabla_alertas.index.name = "Segmento"
 
-    # 48 h con el mismo conjunto de variables
-    print("Entrenando 48 h...")
-    con_y48 = tabla["y48"].notna()
-    E48, C48, P48 = tabla[ent & con_y48], tabla[cal & con_y48], tabla[prueba & con_y48]
-    m48 = hgb().fit(E48[cols], E48["y48"])
-    iso48 = calibrar(m48.predict_proba(C48[cols])[:, 1], C48["y48"])
-    p48 = iso48.predict(m48.predict_proba(P48[cols])[:, 1])
-    res48 = pd.DataFrame({"Gradient boosting 48 h": metricas(P48["y48"], p48),
-                          "Climatología 48 h": metricas(P48["y48"], P48["clim_comuna_mes"])}).T
+    # 48 h y 7 días con el mismo conjunto de variables, cada uno contra la climatología de su propio horizonte
+    print("Entrenando 48 h y 7 días...")
+    p_cal_24 = iso.predict(modelo.predict_proba(C[cols])[:, 1])
+    otros = {obj: entrenar_horizonte(tabla, obj, dias, cols, ent, cal, prueba)
+             for obj, (_, dias) in HORIZONTES.items() if obj != "y24"}
+    niveles_h = {"y24": NIVELES} | {obj: umbrales_equivalentes(p_cal_24, h["p_cal"]) for obj, h in otros.items()}
+    etiqueta = {"y48": "48 h", "y7d": "7 días"}
+    res_h = pd.DataFrame({k: v for obj, h in otros.items() for k, v in (
+        (f"Gradient boosting {etiqueta[obj]}", h["modelo_prueba"]),
+        (f"Climatología {etiqueta[obj]}", h["clim_prueba"]))}).T
+    ventaja = {"y24": resultados[elegido]["precision_media"]
+               / resultados["Climatología (comuna × mes)"]["precision_media"]}
+    ventaja |= {obj: h["modelo_prueba"]["precision_media"] / h["clim_prueba"]["precision_media"]
+                for obj, h in otros.items()}
+    tabla_umbrales = pd.DataFrame(
+        {etiqueta.get(obj, "24 h"): {n: 100 * u for u, n in niv if u > 0} for obj, niv in niveles_h.items()}).T
+    tabla_umbrales.index.name = "Horizonte"
+    tabla_umbrales = tabla_umbrales.rename(columns={"medio": "medio desde (%)", "alto": "alto desde (%)",
+                                                    "muy_alto": "muy alto desde (%)"})
 
     # Importancia (por permutación, muestra de prueba)
     muestra = P.sample(min(120_000, len(P)), random_state=1)
@@ -257,21 +305,46 @@ def main() -> int:
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     backtest.to_parquet(config.PROCESSED_DIR / "riesgo_backtest.parquet", index=False)
 
-    # Riesgo "último": con los datos hasta FIN, para el día siguiente
-    ultimo = hist[hist["fecha"] == pd.Timestamp(FIN)].copy()
-    ultimo["mes"] = ultimo["valido_para"].dt.month
-    hist_pct = hist[hist["fecha"] < pd.Timestamp(FIN)].assign(mes=lambda d: d["valido_para"].dt.month)
-    riesgo = pd.DataFrame({
-        "region_id": ultimo["region_id"].astype("string"),
-        "valido_para": ultimo["valido_para"],
-        "horizonte_horas": 24,
-        "prob_foco": ultimo["prob"].astype(float),
-        "percentil": percentil_historico(ultimo[["region_id", "mes", "prob"]], hist_pct),
-        "nivel": nivel(ultimo["prob"].to_numpy()),
-        "modelo": nombre_modelo,
-    })
+    # Riesgo "último": con los datos hasta FIN, desde el día siguiente; una fila por comuna y horizonte
+    filas_riesgo = []
+    for obj, (horas, _) in HORIZONTES.items():
+        if obj == "y24":
+            prob_h = hist["prob"]
+        else:
+            prob_h = otros[obj]["calibrador"].predict(otros[obj]["modelo"].predict_proba(hist[cols])[:, 1])
+        h = hist[["region_id", "fecha", "valido_para"]].assign(prob=prob_h, mes=lambda d: d["valido_para"].dt.month)
+        ultimo = h[h["fecha"] == pd.Timestamp(FIN)]
+        filas_riesgo.append(pd.DataFrame({
+            "region_id": ultimo["region_id"].astype("string"),
+            "valido_para": ultimo["valido_para"],
+            "horizonte_horas": horas,
+            "prob_foco": ultimo["prob"].astype(float),
+            "percentil": percentil_historico(ultimo[["region_id", "mes", "prob"]], h[h["fecha"] < pd.Timestamp(FIN)]),
+            "nivel": nivel(ultimo["prob"].to_numpy(), niveles_h[obj]),
+            "modelo": nombre_modelo,
+        }))
+    riesgo = pd.concat(filas_riesgo, ignore_index=True)
     validar_riesgo(riesgo)
     riesgo.to_parquet(config.PROCESSED_DIR / "riesgo.parquet", index=False)
+
+    # Detalle por horizonte (lo usa 13_exportar_sectores.py para riesgo/48h.json y riesgo/7d.json)
+    clim24 = resultados["Climatología (comuna × mes)"]
+    claves = ["auc", "precision_media", "captura_top10", "tasa_base"]
+    info_h = {"modelo": nombre_modelo, "periodo_prueba": "2022-2025", "horizontes": {}}
+    for obj, (horas, dias) in HORIZONTES.items():
+        mp = resultados[elegido] if obj == "y24" else otros[obj]["modelo_prueba"]
+        cp = clim24 if obj == "y24" else otros[obj]["clim_prueba"]
+        info_h["horizontes"][str(horas)] = {
+            "dias": dias,
+            "valido_desde": (pd.Timestamp(FIN) + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+            "valido_hasta": (pd.Timestamp(FIN) + pd.Timedelta(days=dias)).strftime("%Y-%m-%d"),
+            "umbrales": {n: u for u, n in niveles_h[obj]},
+            "prueba_modelo": {k: round(mp[k], 4) for k in claves},
+            "prueba_climatologia": {k: round(cp[k], 4) for k in claves},
+            "ventaja_sobre_climatologia": round(ventaja[obj], 3),
+        }
+    (config.PROCESSED_DIR / "riesgo_horizontes.json").write_text(json.dumps(info_h, ensure_ascii=False, indent=2),
+                                                                encoding="utf-8")
 
     r = resultados[elegido]
     ign = seg[elegido].loc["ignición"]
@@ -319,7 +392,7 @@ def main() -> int:
     nivel_vispera = caso_tabla.loc["2024-02-03", "Nivel"]
     lr_auc = resultados["Regresión logística (FIRMS)"]["auc"]
     reporte = [
-        "# Riesgo de focos a 24-48 h por comuna",
+        "# Riesgo de focos por comuna a 24 h, 48 h y 7 días",
         f"_Generado por `scripts/08_riesgo.py` el {generado}. No editar a mano: se regenera._",
         "",
         "## Resumen",
@@ -335,6 +408,9 @@ def main() -> int:
         f"{resultados['Persistencia + climatología']['auc']:.3f}). La regresión logística rinde casi igual "
         f"(AUC {lr_auc:.3f}): la ganancia viene de las variables, no de la complejidad del modelo. Se usa gradient "
         "boosting porque admite nuevos bloques (clima, vegetación) sin rediseñar.",
+        f"- **Horizontes:** en precisión media, el modelo supera a la climatología de su horizonte ×{ventaja['y24']:.2f} "
+        f"a 24 h, ×{ventaja['y48']:.2f} a 48 h y ×{ventaja['y7d']:.2f} a 7 días"
+        + (": la vista semanal es sobre todo estacional (orientativa)." if ventaja["y7d"] < 1.2 else "."),
         f"- **Límite honesto:** sus alertas (nivel alto o muy alto) **sirven para priorizar, no para anticipar todo**. "
         f"En comunas **con fuego reciente** acertaron el **{ap['% de alertas con fuego']:.0f} %** de las veces (tasa "
         f"base {ap['Tasa base (%)']:.0f} %) y cubrieron el {ap['% del fuego que tuvo alerta']:.0f} % de los días con "
@@ -368,9 +444,26 @@ def main() -> int:
         "",
         tabla_md(tabla_alertas, 1),
         "",
-        "## 3. Horizonte de 48 h",
+        "## 3. Horizontes de 48 h y 7 días",
+        "Mismas variables que a 24 h. Cada modelo se compara con la climatología de su propio horizonte (frecuencia "
+        "histórica, en la comuna y el mes, de tener al menos un foco en esos días). La precisión media sube con el "
+        "horizonte solo porque hay más casos positivos: lo que importa es cuánto supera a la climatología.",
         "",
-        tabla_md(res48.rename(columns=NOMBRES_METRICAS), 3),
+        tabla_md(res_h.rename(columns=NOMBRES_METRICAS), 3),
+        "",
+        f"Ventaja sobre la climatología en precisión media: 24 h ×{ventaja['y24']:.2f}, 48 h ×{ventaja['y48']:.2f}, "
+        f"7 días ×{ventaja['y7d']:.2f}. "
+        + ("**A 7 días el modelo aporta poco sobre el calendario:** usa el clima observado del último día, que dice "
+           "poco de la semana siguiente. La vista semanal debe rotularse como orientativa (estacional); para mejorarla "
+           "haría falta un pronóstico del tiempo."
+           if ventaja["y7d"] < 1.2 else
+           "A 7 días el modelo sigue superando claramente a la climatología."),
+        "",
+        "Umbrales de nivel por horizonte. A 48 h y 7 días se fijan para que, en calibración 2020-2021, cada nivel "
+        "agrupe la misma proporción de días-comuna que a 24 h (con los umbrales de 24 h, a 7 días casi todo saldría "
+        "\"alto\").",
+        "",
+        tabla_md(tabla_umbrales, 1),
         "",
         "## 4. Calibración (prueba 2022-2025)",
         "Si la probabilidad está bien calibrada, lo predicho y lo observado coinciden en cada decil.",
@@ -387,11 +480,12 @@ def main() -> int:
         tabla_md(caso_tabla, 1),
         "",
         "## 7. Niveles y salidas",
-        "- Niveles por probabilidad: `bajo` < 4 % (≈ tasa base) ≤ `medio` < 12 % ≤ `alto` < 30 % ≤ `muy_alto`.",
+        "- Niveles por probabilidad a 24 h: `bajo` < 4 % (≈ tasa base) ≤ `medio` < 12 % ≤ `alto` < 30 % ≤ `muy_alto`. "
+        "A 48 h y 7 días, los umbrales de la sección 3.",
         "- `percentil`: posición de la probabilidad contra las del mismo comuna y mes en 2020-2025.",
-        f"- `data/processed/riesgo.parquet`: riesgo para el día siguiente al último dato ({FIN}), con el contrato "
-        "`riesgo`. Para un riesgo de verdad para mañana hacen falta los focos de 2026 (FIRMS casi en tiempo real, "
-        "MAP_KEY).",
+        f"- `data/processed/riesgo.parquet`: riesgo desde el día siguiente al último dato ({FIN}) a 24 h, 48 h y 7 "
+        "días, con el contrato `riesgo`. Para un riesgo de verdad para mañana hacen falta los focos de 2026 (FIRMS "
+        "casi en tiempo real, MAP_KEY).",
         "- `data/processed/riesgo_backtest.parquet`: predicciones de 2020-2025 con lo que pasó, para revisar casos.",
         "- Para sumar variables (clima, vegetación) basta crear el bloque con llave comuna × día: el script lo detecta "
         "y agrega la fila a la comparación.",
@@ -401,7 +495,9 @@ def main() -> int:
 
     print("\n" + pd.DataFrame(resultados).T[["auc", "precision_media", "captura_top10", "lift_top10", "brier"]].round(3).to_string())
     print(f"\nIgnición AUC {ign['auc']:.3f} | Propagación AUC {prop['auc']:.3f}")
-    print(res48[["auc", "precision_media", "captura_top10"]].round(3).to_string())
+    print(res_h[["auc", "precision_media", "captura_top10"]].round(3).to_string())
+    print(f"Ventaja sobre climatología (AP): {ventaja}")
+    print(tabla_umbrales.round(1).to_string())
     print(caso_tabla.to_string())
     print(importancia.head(6).round(4).to_string())
     print("Reporte: docs/riesgo.md  |  Figura: docs/figuras/riesgo_vina_2024.png")

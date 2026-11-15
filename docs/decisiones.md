@@ -2,8 +2,46 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-14 (noche): piloto por sector y modelo v3
+
+- **Piloto A+ por sector (Región de Valparaíso, 36 comunas continentales):** el equipo quería un mapa por sector con
+  probabilidad por tipo de incendio. Medido antes de decidir: no hay datos para una probabilidad por sector ni por
+  tipo (el clima es por comuna, el satélite no ve conatos, CONAF SIDCO pide usuario). Se hace la versión que los
+  datos sostienen: riesgo **por comuna** (modelo validado) y, dentro, sectores de 1 km **descriptivos** (historial
+  de focos, vegetación ESA WorldCover, interfaz con viviendas WUI, pendiente Copernicus DEM) con recomendaciones
+  oficiales citadas y una lista de prioridad. Detalle en `docs/sectores.md`.
+- **Orden de prioridad dentro de la comuna:** días con fuego previos y, a igualdad, interfaz. Elegido en calibración
+  2020-2021 entre cuatro alternativas (26 % del fuego en el 10 % de sectores, azar 10 %); prueba 2022-2025: 29 %.
+  Contar factores de exposición no ordenaba mejor que el azar en calibración (12 %): queda solo como descripción.
+- **Fuentes persistentes:** 17 sectores con detecciones nocturnas todo el año (refinería, fundiciones, cementera;
+  FIRMS no las marca como fuente fija) se excluyen del historial de incendios. Regla: ≥ 10 días, ≥ 5 años, ≥ 60 %
+  de noche y nunca parte de un incendio de más de 10 focos. El modelo por comuna todavía las cuenta en su objetivo
+  (pendiente).
+- **Modelo v3 (`hgb_firms_clima_v3`) con 14 variables en todos los horizontes:** se sacan `n_hoy`, `n_3d`,
+  `vecinos_hoy`, `vecinos_3d`, `doy_sin`, `doy_cos`, `dia_semana`, `area_km2` y `dias_sin_lluvia` (se siguen calculando
+  para líneas base y backtest). Calibración: +0,0043 de AP a 24 h (3 de 3 semillas), empate a 48 h, −0,0014 a 7 días.
+  Prueba 2022-2025 a 24 h: AUC 0,850 → 0,846, AP 0,280 → 0,282, captura top 10 % 52,7 % → 52,0 %. Lo decidió el
+  usuario ("14 para todo") tras ver estos números.
+- **Horizontes 48 h y 7 días publicados:** a 7 días el modelo supera poco a la climatología (AP ×1,10; a 24 h ×1,88)
+  porque usa el clima observado del último día: la vista semanal va rotulada "orientativa". Umbrales de nivel por
+  horizonte: los de 24 h se trasladan para que cada nivel agrupe la misma proporción de días-comuna en calibración.
+- **Pronóstico del tiempo: no se integra por ahora (medido).** Cota superior en calibración 2020-2021 entrenando con
+  el clima OBSERVADO de los días futuros (un pronóstico perfecto): a 7 días la precisión media sube solo de 0,571 a
+  0,585 (×1,10 → ×1,12 sobre la climatología); a 24 h, de 0,321 a 0,344 (+7 %). Un pronóstico real rinde menos. A 7
+  días no lo justifica; a 24 h podría servir cuando haya focos en tiempo real (MAP_KEY). Script:
+  `_retomar/pronostico_cota.py` (fuera del repo).
+- **Contrato v0.3 (aditivo):** suma `riesgo/48h.json`, `riesgo/7d.json`, `sectores/{id}.geojson`,
+  `sectores/{id}_focos.csv`, `alertas/{región}.json` y `recomendaciones.json`. Los archivos de la v0.2 no cambian.
+
 ## 2026-11-14
 
+- **Fuga de objetivo en la climatología (corregida, modelo v2):** al evaluar las variables se vio que
+  `clim_comuna_mes` era la más importante por permutación (0,171) pero quitarla mejoraba el modelo en calibración
+  (+0,0088 de AP, 7 veces el ruido entre semillas). Causa: en el entrenamiento se calculaba con los mismos días que
+  se predecían. Ahora, para cada año de entrenamiento se calcula con los otros años. Prueba 2022-2025: AUC
+  0,837 → 0,850, precisión media 0,271 → 0,280, captura del 10 % de mayor riesgo 51,6 % → 52,7 %; el gradient
+  boosting ahora supera claramente a la regresión logística (0,850 vs 0,831). Tests de no-fuga en
+  `tests/test_riesgo.py`.
 - **Riesgo con clima (NASA POWER, B5 de David):** se suma el bloque de clima (temperatura máxima, humedad mínima
   aproximada, viento, lluvia, lluvia de 7 días y días sin llover). Ganó en el período de calibración y queda como
   modelo publicado: `hgb_firms_clima_v1`. En prueba 2022-2025: AUC 0,827 → **0,837**, precisión media 0,253 →

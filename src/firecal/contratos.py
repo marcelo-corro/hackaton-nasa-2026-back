@@ -18,6 +18,7 @@ NIVELES_CALENDARIO = {"baja", "normal", "alta", "extrema"}
 
 RIESGO_COLUMNAS = ["region_id", "valido_para", "horizonte_horas", "prob_foco", "percentil", "nivel", "modelo"]
 NIVELES_RIESGO = {"bajo", "medio", "alto", "muy_alto"}
+HORIZONTES_RIESGO = {24, 48, 168}  # 168 h = la próxima semana
 
 
 class ContratoError(ValueError):
@@ -104,6 +105,8 @@ def validar_riesgo(df: pd.DataFrame) -> None:
         problemas.append("prob_foco debe estar entre 0 y 1")
     if not df["nivel"].isin(NIVELES_RIESGO).all():
         problemas.append(f"nivel debe ser uno de {sorted(NIVELES_RIESGO)}")
-    if df.duplicated(["region_id", "valido_para"]).any():
-        problemas.append("hay filas repetidas para la misma (region_id, valido_para)")
+    if not df["horizonte_horas"].isin(HORIZONTES_RIESGO).all():
+        problemas.append(f"horizonte_horas debe ser uno de {sorted(HORIZONTES_RIESGO)}")
+    if df.duplicated(["region_id", "valido_para", "horizonte_horas"]).any():
+        problemas.append("hay filas repetidas para la misma (region_id, valido_para, horizonte_horas)")
     _fallar_si(problemas, "riesgo")

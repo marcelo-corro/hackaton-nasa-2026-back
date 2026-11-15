@@ -55,14 +55,16 @@ saldría como "baja" en vez de "normal".
 | Columna | Tipo | Regla |
 |---|---|---|
 | `region_id` | string | CUT de 5 dígitos |
-| `valido_para` | datetime | día local al que se refiere el pronóstico |
-| `horizonte_horas` | int | 24 o 48 |
+| `valido_para` | datetime | primer día local al que se refiere el pronóstico (el día siguiente al último dato) |
+| `horizonte_horas` | int | 24, 48 o 168 (168 = los 7 días desde `valido_para`) |
 | `prob_foco` | float 0-1 | probabilidad de al menos un foco en la comuna en el horizonte |
 | `percentil` | float 0-100 | cómo se compara con la historia de esa comuna en esa época del año |
 | `nivel` | string | `bajo`, `medio`, `alto` o `muy_alto` |
 | `modelo` | string | nombre y versión del modelo |
 
-Una fila por comuna y `valido_para`. La exportación publica solo el `valido_para` más reciente.
+Una fila por comuna, `valido_para` y `horizonte_horas`. La exportación publica solo el `valido_para` más reciente:
+`riesgo/ultimo.json` lleva el horizonte más corto (24 h) y `13_exportar_sectores.py` publica 48 h y 7 días.
+Los umbrales de `nivel` dependen del horizonte (ver `docs/riesgo.md`).
 
 ## metricas.json
 

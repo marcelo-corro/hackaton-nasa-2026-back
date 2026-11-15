@@ -5,12 +5,14 @@ los objetivos miran el futuro:
 
     y24  ¿hay al menos un foco Suomi NPP (`uso_base`) en la comuna el día t+1?
     y48  ¿y en t+1 o t+2?
+    y7d  ¿y entre t+1 y t+7 (la próxima semana)?
 
 Bloques:
 - FIRMS (`tabla_base`): focos y FRP de hoy, ventanas de 3/7/30 días, días desde el último foco, focos en comunas
   vecinas, calendario y datos fijos de la comuna.
 - Climatología (`agregar_climatologia`): frecuencia histórica de días con fuego por comuna y mes, calculada SOLO
-  con las filas de entrenamiento para no filtrar información del período de prueba.
+  con las filas de entrenamiento (sin información del período de prueba) y, para cada año de entrenamiento, con los
+  otros años (sin fuga de objetivo dentro del entrenamiento).
 - Clima (`bloque_clima`): opcional; se suma si existe data/interim/clima_diario.parquet (tarea B5).
 """
 
@@ -32,6 +34,13 @@ VARIABLES_FIRMS = [
 ]
 VARIABLES_CLIMATOLOGIA = ["clim_comuna_mes", "clim_comuna"]
 VARIABLES_CLIMA = ["tmax", "hrmin", "viento_max", "precip", "precip_7d", "dias_sin_lluvia"]
+
+# Variables que usa el modelo: 14 de las 23 columnas (selección del 14-11-2026, ver docs/decisiones.md). En
+# calibración 2020-2021, sacar n_hoy, n_3d, vecinos_hoy, vecinos_3d, doy_sin, doy_cos, dia_semana, area_km2 y
+# dias_sin_lluvia subió la precisión media a 24 h (+0,0043, 3 de 3 semillas), empató a 48 h y costó −0,0014 a 7 días.
+# Las otras columnas se siguen calculando: las usan las líneas base, la regresión logística y el backtest.
+VARIABLES_MODELO_FIRMS = ["frp_hoy", "n_7d", "n_30d", "dias_desde_ultimo", "mes", "lat", "lon"]
+VARIABLES_MODELO_CLIMA = ["tmax", "hrmin", "viento_max", "precip", "precip_7d"]
 
 
 def matrices_diarias(
@@ -91,6 +100,9 @@ def tabla_base(focos: pd.DataFrame, comunas: gpd.GeoDataFrame, inicio: str, fin:
     y24[:, :-1] = hay[:, 1:]
     y48 = np.full((n_c, n_d), np.nan)
     y48[:, :-2] = np.maximum(hay[:, 1:-1], hay[:, 2:])
+    acum = np.concatenate([np.zeros((n_c, 1)), np.cumsum(hay, axis=1)], axis=1)  # acum[:, k] = días con fuego < k
+    y7d = np.full((n_c, n_d), np.nan)
+    y7d[:, :-7] = (acum[:, 8:] - acum[:, 1:-7]) > 0  # algún foco entre t+1 y t+7
 
     destino = dias + pd.Timedelta(days=1)  # el calendario se refiere al día que se predice
     doy = destino.day_of_year.to_numpy()
@@ -101,6 +113,7 @@ def tabla_base(focos: pd.DataFrame, comunas: gpd.GeoDataFrame, inicio: str, fin:
         "fecha": np.tile(dias.to_numpy(), n_c),
         "y24": y24.ravel(),
         "y48": y48.ravel(),
+        "y7d": y7d.ravel(),
         "n_hoy": conteo.ravel(),
         "frp_hoy": frp.ravel(),
         "n_3d": suma_movil(conteo, 3).ravel(),
@@ -125,12 +138,33 @@ def tabla_base(focos: pd.DataFrame, comunas: gpd.GeoDataFrame, inicio: str, fin:
 
 
 def agregar_climatologia(tabla: pd.DataFrame, filas_entrenamiento: pd.Series) -> pd.DataFrame:
-    """Frecuencia histórica de días con fuego (y24) por comuna y mes, usando SOLO filas de entrenamiento."""
-    ent = tabla.loc[filas_entrenamiento & tabla["y24"].notna()]
-    por_mes = ent.groupby(["region_id", "mes"])["y24"].mean().rename("clim_comuna_mes")
-    por_comuna = ent.groupby("region_id")["y24"].mean().rename("clim_comuna")
-    out = tabla.join(por_mes, on=["region_id", "mes"]).join(por_comuna, on="region_id")
-    out[VARIABLES_CLIMATOLOGIA] = out[VARIABLES_CLIMATOLOGIA].fillna(0).astype("float32")
+    """Frecuencia histórica de días con fuego (y24) por comuna y mes (`clim_comuna_mes`) y por comuna (`clim_comuna`).
+
+    Solo usa filas de entrenamiento, y sin fuga de objetivo:
+    - filas de entrenamiento: se calcula con los OTROS años de entrenamiento (se deja fuera el año de la fila). Si
+      se incluyera el propio año, cada fila "vería" en parte su propia respuesta y el modelo aprendería a confiar
+      demasiado en esta variable (pasaba: permutarla pesaba mucho, pero quitarla mejoraba la calibración);
+    - demás filas (calibración, prueba, predicción): con todos los años de entrenamiento.
+    Sin datos (por ejemplo, un solo año de entrenamiento) queda en 0.
+    """
+    anio = (tabla["fecha"] + pd.Timedelta(days=1)).dt.year  # año del día que se predice, igual que `mes`
+    ent = filas_entrenamiento & tabla["y24"].notna()
+    d = pd.DataFrame({"region_id": tabla["region_id"], "mes": tabla["mes"], "anio": anio,
+                      "y": tabla["y24"].where(ent)})
+
+    out = tabla.copy()
+    for nombre, llave in (("clim_comuna_mes", ["region_id", "mes"]), ("clim_comuna", ["region_id"])):
+        por_anio = d[ent].groupby(llave + ["anio"])["y"].agg(["sum", "count"])
+        total = por_anio.groupby(level=llave).sum()
+        # Todas las filas: con todos los años de entrenamiento
+        tot = d[llave].join(total, on=llave)
+        valor = tot["sum"] / tot["count"]
+        # Filas de entrenamiento: restando su propio año
+        propio = d.loc[ent, llave + ["anio"]].join(por_anio, on=llave + ["anio"])
+        resto_sum = tot.loc[ent, "sum"] - propio["sum"]
+        resto_n = tot.loc[ent, "count"] - propio["count"]
+        valor.loc[ent] = (resto_sum / resto_n.where(resto_n > 0)).to_numpy()
+        out[nombre] = valor.fillna(0).astype("float32").to_numpy()
     return out
 
 
