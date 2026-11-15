@@ -1,8 +1,12 @@
-# Contrato back → front · versión 0.4
+# Contrato back → front · versión 0.5
 
 > Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
 
 **Cambios**
+- 0.5 (15-11-2026): **alertas por tipo**. La forma de los archivos no cambia (solo suma campos), pero la lista de
+  `alertas/{codigo_region}.json` ahora puede venir **vacía** o con otro largo que 25. Suma `tipo`, `motivo_orden` y
+  `dist_foco_reciente_km` por ítem, `listas` y `validacion` por archivo, y `fuego_activo`, `motivos` y datos de
+  temporada por comuna. Detalle al final.
 - 0.4 (15-11-2026): **aditivo**. Los sectores y las alertas suman los campos del modelo B (probabilidad por sector y
   de incendio grande) y el manifest suma `sectores.modelo_b` con sus métricas. Detalle al final.
 - 0.3 (14-11-2026): **aditivo** (los archivos de la 0.2 no cambian de forma). Suma riesgo a 48 h y 7 días y el piloto
@@ -262,3 +266,43 @@ Los ítems de `alertas/{codigo_region}.json → horizontes` suman `prob_si_fuego
 
 - Para 48 h y 7 días no hay `prob_fuego_*` por sector: se muestra `prob_si_fuego_en_comuna` junto al riesgo de la comuna.
 - Mostrar `nota` cerca del mapa. No decir que el modelo "predice dónde empieza un incendio".
+
+---
+
+## v0.5 · Alertas por tipo (fuego activo, alerta, vigilancia)
+
+Cambia **cómo se arma** la lista de `alertas/{codigo_region}.json → horizontes[h]`:
+
+| Tipo (`tipo`) | Qué comunas | Orden de sus sectores (`motivo_orden`) | Sectores por comuna |
+|---|---|---|---|
+| `fuego_activo` | Focos (sin industria) en los 3 días previos, **cualquiera sea su nivel** | `cerca_fuego_reciente`: más cerca del foco reciente primero | hasta 5 |
+| `alerta` | Nivel alto o muy alto, sin fuego activo | `historial_interfaz` | hasta 5 |
+| `vigilancia` | Nivel medio, sin fuego activo | `historial_interfaz` | hasta 3 |
+
+Las comunas en nivel **bajo no entran**: la lista puede venir **vacía**. Orden: primero `fuego_activo`, luego `alerta`,
+luego `vigilancia`; dentro de cada tipo, por nivel y probabilidad. Los ítems `fuego_activo` traen además
+`dist_foco_reciente_km`.
+
+Nuevos campos del archivo:
+
+```json
+"listas": {"24": {"tipo_lista": "alertas", "titulo": "Alertas para mañana", "comunas_fuego_activo": 4,
+                  "comunas_alerta": 0, "comunas_vigilancia": 0, "vacia": false, "mensaje": null},
+           "48": {...}, "168": {"tipo_lista": "prioridades_semana", "titulo": "Prioridades de la semana (orientativo)", ...}},
+"validacion": {"periodo": "2022-2025", "pct_fuego_dia_siguiente_en_lista": 6.92, "sectores_por_dia": 12.02,
+               "pct_territorio_por_dia": 0.067, "pct_fuego_en_lista_regla_anterior": 4.68,
+               "pct_dias_sin_alertas": 20.96, "nota": "Simulación 2022-2025: la lista marcó en promedio 12 sectores ..."}
+```
+
+- `listas[h].titulo`: usarlo como título. A 7 días es **"Prioridades de la semana (orientativo)"**, no "alertas".
+- Si `listas[h].vacia` es `true`, mostrar `listas[h].mensaje` en vez de la lista.
+- `validacion.nota`: el respaldo de la lista, para la ficha de metodología o el pitch.
+
+En cada elemento de `comunas[]`:
+
+| Campo | Qué es |
+|---|---|
+| `fuego_activo` | Hubo focos (sin industria) en los 3 días previos |
+| `dias_con_fuego_7d`, `ultimo_fuego` | Días con focos en la última semana y fecha del último |
+| `pct_dias_con_fuego_mes` | % de los días de ese mes (2012-2025) con focos en la comuna |
+| `motivos` | Lista de textos listos para mostrar: fuego activo o reciente, clima del último día y temporada. Son hechos verificables que acompañan el nivel, no el peso de cada variable en el modelo |

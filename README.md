@@ -44,6 +44,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/12_sectores.py            # sectores de 1 km de la Región de Valparaíso (~40 s)
 .venv/Scripts/python scripts/12b_validar_sectores.py   # validación de la prioridad + docs/sectores_validacion.md
 .venv/Scripts/python scripts/12c_modelo_sectores.py --prueba  # modelo B por sector e incendio grande (~1 min)
+.venv/Scripts/python scripts/12d_validar_alertas.py    # simula la lista de alertas 2020-2025 + docs/alertas_validacion.md
 .venv/Scripts/python scripts/09_exportar.py            # archivos del contrato en public/
 .venv/Scripts/python scripts/13_exportar_sectores.py   # suma sectores, alertas y riesgo 48 h / 7 días a public/
 .venv/Scripts/python scripts/10_publicar.py --sin-push # copia al repo de datos y hace commit; sin --sin-push, publica

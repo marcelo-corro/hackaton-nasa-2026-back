@@ -62,7 +62,11 @@ Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el c
 - **Ficha del sector (al hacer clic):** rasgos en texto (`recomendaciones.json → rasgos`), % de cada capa, días con
   fuego y último fuego, y las recomendaciones del horizonte elegido (`recomendaciones[horizonte]`) con el enlace a
   su fuente oficial.
-- **Alertas arriba:** `alertas/05.json → horizontes[h]`, en el orden en que vienen; mostrar `nota`. Junto a cada
+- **Alertas arriba (v0.5):** `alertas/05.json → horizontes[h]`, en el orden en que vienen; título de
+  `listas[h].titulo` (a 7 días son "Prioridades de la semana", no alertas); si `listas[h].vacia`, mostrar
+  `listas[h].mensaje`. Cada ítem trae `tipo` (`fuego_activo`, `alerta`, `vigilancia`): agrupar o colorear por tipo y
+  mostrar `dist_foco_reciente_km` en los de fuego activo. Junto a cada comuna, sus `motivos` (textos listos).
+  Mostrar `nota`. Junto a cada
   comuna, las condiciones del clima (`comunas[].clima_ultimo_dia.condiciones`, texto en
   `recomendaciones.json → condiciones`) y sus `recomendaciones_clima` (por ejemplo, Faena Cero de CONAF con calor).
   Si aparece `condicion_30_30_30`, destacarla, sin decir que "habrá incendio" (la DMC aclara que no lo pronostica).

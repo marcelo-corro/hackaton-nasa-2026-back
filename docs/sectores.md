@@ -73,6 +73,30 @@ local. Ejemplo: la víspera del incendio de 2024 (2-3 de febrero), Viña del Mar
 aire seco y viento entre el 10 % más extremo del mes, y más de 30 °C con humedad bajo 30 %; el viento de NASA POWER no
 pasó los 30 km/h, así que no se marca 30-30-30.
 
+## 3c. Alertas v0.5 (`firecal.sectores.alertas`, validación en `12d_validar_alertas.py`)
+
+| Tipo | Qué comunas | Orden de sus sectores |
+|---|---|---|
+| Fuego activo | Focos (sin industria) en los 3 días previos, cualquiera sea su nivel | Cercanía al foco reciente (hasta 5) |
+| Alerta | Nivel alto o muy alto | Días con fuego previos, luego interfaz (hasta 5) |
+| Vigilancia | Nivel medio | Igual (hasta 3) |
+
+Nivel bajo no entra; la lista puede ir vacía. A 7 días: "Prioridades de la semana (orientativo)". Simulación de la
+lista de cada día (lo conocido hasta t contra los focos de t+1; `docs/alertas_validacion.md`):
+
+| | v0.4 (25 sectores fijos) | v0.5 |
+|---|---|---|
+| Sectores por día | 25 | ~12 (0 el 21 % de los días) |
+| Fuego del día siguiente en la lista, prueba 2022-2025 | 4,7 % | **6,9 %** |
+| Ídem, calibración 2020-2021 | 3,7 % | **14,3 %** |
+| % de sectores listados que tuvo fuego (prueba) | 0,18 % | **0,55 %** |
+| Comunas con fuego al día siguiente que estaban en la lista (prueba) | 30,5 % | 27,7 % |
+
+Con 0,07 % del territorio por día, la v0.5 concentra ~100 veces más fuego que el azar. Pero a nivel de sector la
+lista diaria atrapa poco del fuego nuevo: el producto fuerte sigue siendo el riesgo por comuna. El 92 % de los días en
+alto o muy alto ya tenía fuego activo. Caso 4-feb-2024 con las reglas v0.5: 3 de los sectores listados tuvieron
+focos ese día (con la regla anterior, 0).
+
 ## 4. ¿Ordena bien la prioridad? (validación sin fuga)
 
 ¿Qué % de los días-sector con fuego cae en el 10 % de sectores de su comuna con mayor puntaje? Historial contado solo

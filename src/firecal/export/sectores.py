@@ -28,10 +28,12 @@ ARCHIVOS_SECTORES = {
 }
 NOMBRE_HORIZONTE = {24: "24 h", 48: "48 h", 168: "7 días"}
 # Debe describir el orden de firecal.sectores.recomendaciones.prioridad_alertas (validado en 12b_validar_sectores.py)
-NOTA_ALERTAS = ("Orden de prioridad: comunas con mayor riesgo y, dentro de ellas, sectores con más días con fuego "
-                "previos y, a igualdad, más casas junto a la vegetación (interfaz). En la prueba 2022-2025, el 10 % de "
-                "sectores mejor ordenados de cada comuna concentró el 29 % del fuego (azar 10 %). No es la "
-                "probabilidad de que ese sector se queme.")
+NOTA_ALERTAS = ("Primero las comunas con fuego activo (focos en los 3 días previos), con sus sectores ordenados por "
+                "cercanía a esos focos; luego las de riesgo alto o muy alto (alerta) y medio (vigilancia), con sus "
+                "sectores ordenados por días con fuego previos y, a igualdad, más casas junto a la vegetación "
+                "(interfaz). Las comunas en riesgo bajo no entran. No es la probabilidad de que ese sector se queme.")
+TITULO_LISTA = {24: "Alertas para mañana", 48: "Alertas a 48 horas", 168: "Prioridades de la semana (orientativo)"}
+MENSAJE_VACIA = "Sin comunas con fuego activo ni riesgo medio o mayor para este horizonte."
 NOTA_HORIZONTE = {
     24: "Probabilidad de al menos un foco en la comuna mañana.",
     48: "Probabilidad de al menos un foco en la comuna mañana o pasado.",
@@ -125,6 +127,10 @@ def _item_alerta(s: pd.Series, codigo_region: str, condiciones: dict[str, list[s
     if "prob_condicional" in s and pd.notna(s["prob_condicional"]):
         b = {"prob_si_fuego_en_comuna": round(float(s["prob_condicional"]), 4),
              "prob_incendio_grande": round(float(s["prob_grande"]), 3)}
+    if "tipo" in s:  # v0.5
+        b |= {"tipo": s["tipo"], "motivo_orden": s["motivo_orden"]}
+        if s["tipo"] == "fuego_activo":
+            b["dist_foco_reciente_km"] = round(float(s["dist_foco_reciente_km"]), 1)
     return {**b, "sector_id": s["sector_id"], "region_id": s["region_id"], "comuna": s["comuna"],
             "nivel_comuna": s["nivel"], "prob_foco_comuna": round(float(s["prob_foco"]), 3),
             "exposicion": int(s["exposicion"]), "rasgos": list(s["rasgos"]),
@@ -133,13 +139,24 @@ def _item_alerta(s: pd.Series, codigo_region: str, condiciones: dict[str, list[s
                                                          condiciones.get(s["region_id"], []))}
 
 
+def meta_lista(horas: int, lista: pd.DataFrame) -> dict:
+    """Metadatos de la lista de un horizonte (v0.5): tipo, título, cuántas comunas por nivel y mensaje si va vacía."""
+    com = lista.drop_duplicates("region_id") if len(lista) else lista
+    cuenta = {t: int((com["tipo"] == t).sum()) if len(com) else 0 for t in ("fuego_activo", "alerta", "vigilancia")}
+    return {"tipo_lista": "prioridades_semana" if horas == 168 else "alertas", "titulo": TITULO_LISTA[horas],
+            "comunas_fuego_activo": cuenta["fuego_activo"], "comunas_alerta": cuenta["alerta"],
+            "comunas_vigilancia": cuenta["vigilancia"], "vacia": bool(len(lista) == 0),
+            "mensaje": MENSAJE_VACIA if len(lista) == 0 else None}
+
+
 def alertas_region(codigo_region: str, por_horizonte: dict[int, pd.DataFrame], comunas: list[dict],
                    calculado_utc: str, caso: dict | None = None,
-                   condiciones: dict[str, list[str]] | None = None) -> dict:
+                   condiciones: dict[str, list[str]] | None = None, validacion: dict | None = None) -> dict:
     """alertas/{codigo_region}.json: sectores a priorizar por horizonte y resumen por comuna.
-    `condiciones` = {region_id: [códigos de condición del clima]} para sumar las recomendaciones por clima."""
+    `condiciones` = {region_id: [códigos de condición del clima]} para sumar las recomendaciones por clima.
+    v0.5: si las listas traen la columna `tipo` (firecal.sectores.alertas), se agregan `listas` y `validacion`."""
     condiciones = condiciones or {}
-    return {
+    salida = {
         "contrato": VERSION_CONTRATO, "ejemplo": False, "calculado_utc": calculado_utc,
         "codigo_region": codigo_region,
         "nota": NOTA_ALERTAS,
@@ -148,6 +165,11 @@ def alertas_region(codigo_region: str, por_horizonte: dict[int, pd.DataFrame], c
         "comunas": comunas,
         "caso": caso,
     }
+    if all("tipo" in d.columns or d.empty for d in por_horizonte.values()):
+        salida["listas"] = {str(h): meta_lista(h, d) for h, d in por_horizonte.items()}
+    if validacion:
+        salida["validacion"] = validacion
+    return salida
 
 
 def catalogo_recomendaciones() -> dict:

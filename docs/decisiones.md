@@ -2,6 +2,21 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-15: alertas v0.5
+
+- **Alertas por tipo:** fuego activo (focos sin industria en los 3 días previos, sectores por cercanía al foco),
+  alerta (alto o muy alto) y vigilancia (medio); nivel bajo no entra y la lista puede ir vacía. A 7 días se llama
+  "Prioridades de la semana (orientativo)". Motivo: la lista anterior siempre llenaba 25 sectores, incluso con riesgo
+  bajo, y no miraba el fuego del día. La regla de cercanía se eligió con calibración (88 % vs 27 % en días con fuego).
+- **Simulación de la lista completa 2020-2025** (`12d_validar_alertas.py`, `docs/alertas_validacion.md`): en la prueba
+  2022-2025 la v0.5 marcó ~12 sectores por día (0,07 % del territorio) con el 6,9 % del fuego del día siguiente,
+  contra 4,7 % de la v0.4 con 25 sectores; 21 % de los días sin alertas. A cambio, cubre algo menos de comunas con
+  fuego al día siguiente (27,7 % vs 30,5 %), porque ya no rellena con comunas en riesgo bajo. Límite honesto: a nivel
+  de sector la lista diaria atrapa poco del fuego nuevo; el producto fuerte es el riesgo por comuna.
+- **El 92 % de los días en alto o muy alto ya tenía fuego activo.** Los pocos sin fuego son de comunas con industria
+  (Concón, Catemu, Quillota), que el modelo por comuna todavía cuenta: refuerza el pendiente de sacarla del objetivo.
+- **Motivos por comuna:** hechos verificables (fuego activo o reciente, clima del día, % de días con focos en ese mes).
+
 ## 2026-11-15 (madrugada): modelo B por sector
 
 - **Modelo B publicado como capa adicional (contrato v0.4):** P(fuego en el sector | fuego en la comuna) con caminos

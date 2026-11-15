@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -31,11 +32,14 @@ from firecal.export.sectores import (  # noqa: E402
     resumen_comunas, riesgo_horizonte, sectores_geojson,
 )
 from firecal.model.variables import bloque_clima  # noqa: E402
+from firecal.sectores.alertas import DIAS_FUEGO_ACTIVO, armar_lista, motivos_comuna  # noqa: E402
+from firecal.sectores.grilla import CRS_METRICO  # noqa: E402
 from firecal.sectores.recomendaciones import (  # noqa: E402
-    condiciones_clima, prioridad_alertas, rasgos_sector, recomendaciones_completas,
+    CONDICIONES, FACTORES_EXPOSICION, condiciones_clima, rasgos_sector, recomendaciones_completas,
 )
 
 CASO_FECHA = "2024-02-04"  # incendio de Viña del Mar, Quilpué y Villa Alemana, activo desde el 2 de febrero
+INICIO_DATOS = pd.Timestamp("2012-02-01")  # primer día con VIIRS Suomi NPP en la serie
 
 
 def _json(ruta: Path, datos: dict) -> None:
@@ -96,41 +100,76 @@ def main() -> int:
         ruta = publico / ARCHIVOS_SECTORES["sectores_focos"].format(region_id=rid)
         ruta.write_text(focos_sector_csv(f), encoding="utf-8")
 
-    # Alertas por horizonte (valido_para más reciente)
-    por_horizonte = {h: prioridad_alertas(sectores, ultimo[ultimo["horizonte_horas"] == h]) for h in (24, 48, 168)}
-    comunas = resumen_comunas(riesgo, cond, nombres, codigos, args.region)
+    # Alertas v0.5 por horizonte (firecal.sectores.alertas): fuego activo, alerta y vigilancia
+    s_v = sectores[~sectores["fuente_persistente"]].reset_index(drop=True)
+    s_v["exposicion"] = s_v["rasgos"].apply(lambda r: sum(x in r for x in FACTORES_EXPOSICION))
+    xy_sv = np.column_stack([s_v.geometry.representative_point().x, s_v.geometry.representative_point().y])
+    dia_foco = focos["fecha_local"].dt.normalize()
+    pf = gpd.GeoSeries(gpd.points_from_xy(focos["lon"], focos["lat"]), crs="EPSG:4326").to_crs(CRS_METRICO)
+    xy_focos = np.column_stack([pf.x, pf.y])
+    cols_item = ["sector_id", "comuna", "rasgos", "exposicion", "lat", "lon"] + [
+        c for c in ("prob_condicional", "prob_grande") if c in s_v.columns]
 
-    # Caso histórico: cómo se habría visto la lista de prioridad (24 h) y qué pasó ese día
-    bt = backtest[(backtest["valido_para"] == pd.Timestamp(CASO_FECHA)) & backtest["region_id"].isin(codigos)]
-    bt = bt.rename(columns={"prob": "prob_foco"})
-    # sin fuga: el historial del caso se cuenta solo con focos ANTERIORES al día evaluado
-    previo = focos[focos["fecha_local"].dt.normalize() < pd.Timestamp(CASO_FECHA)]
-    s_caso = sectores.copy()
-    s_caso["dias_con_fuego"] = s_caso["sector_id"].map(
-        previo.assign(d=previo["fecha_local"].dt.normalize()).groupby("sector_id")["d"].nunique()).fillna(0)
-    s_caso["incendios_grandes"] = s_caso["sector_id"].map(
-        previo[previo["focos_incendio"] > 10].groupby("sector_id")["evento"].nunique()).fillna(0)
-    s_caso["rasgos"] = rasgos_sector(s_caso)
-    lista_caso = prioridad_alertas(s_caso, bt)
-    con_fuego = set(focos.loc[focos["fecha_local"].dt.normalize() == pd.Timestamp(CASO_FECHA), "sector_id"])
-    vispera = pd.Timestamp(CASO_FECHA) - pd.Timedelta(days=1)
+    def lista_dia(riesgo_h: pd.DataFrame, ultimo_dato: pd.Timestamp, hist: np.ndarray) -> pd.DataFrame:
+        rec = ((dia_foco > ultimo_dato - pd.Timedelta(days=DIAS_FUEGO_ACTIVO)) & (dia_foco <= ultimo_dato)).to_numpy()
+        activas = set(focos.loc[rec, "region_id"].astype(str))
+        lst = armar_lista(s_v, xy_sv, riesgo_h, hist, xy_focos[rec], activas)
+        return lst.merge(s_v[cols_item], on="sector_id", how="left").sort_values("orden") if len(lst) else lst
+
+    por_horizonte = {h: lista_dia(ultimo[ultimo["horizonte_horas"] == h][["region_id", "prob_foco", "nivel"]],
+                                  fecha_clima, s_v["dias_con_fuego"].to_numpy()) for h in (24, 48, 168)}
+    comunas = resumen_comunas(riesgo, cond, nombres, codigos, args.region)
+    textos_cond = {k: v["texto"] for k, v in CONDICIONES.items()}
+    mes_obj = pd.Timestamp(ultimo["valido_para"].max()).month
+    for c in comunas:
+        dias_c = dia_foco[focos["region_id"].astype(str) == c["region_id"]]
+        c.update(motivos_comuna(dias_c, fecha_clima, mes_obj, cond_map.get(c["region_id"], []), textos_cond,
+                                INICIO_DATOS))
+
+    # Caso histórico con las mismas reglas: lista de la víspera (24 h) y qué pasó ese día
+    caso_dia = pd.Timestamp(CASO_FECHA)
+    vispera = caso_dia - pd.Timedelta(days=1)
+    bt = backtest[(backtest["valido_para"] == caso_dia) & backtest["region_id"].isin(codigos)]
+    bt = bt.rename(columns={"prob": "prob_foco"})[["region_id", "prob_foco", "nivel"]]
+    previo = focos[dia_foco <= vispera]  # sin fuga: solo focos anteriores al día evaluado
+    hist_caso = s_v["sector_id"].map(previo.assign(d=dia_foco[dia_foco <= vispera]).groupby("sector_id")["d"]
+                                     .nunique()).fillna(0).to_numpy()
+    lista_caso = lista_dia(bt, vispera, hist_caso)
+    con_fuego = set(focos.loc[dia_foco == caso_dia, "sector_id"])
     cond_caso = condiciones_clima(clima_region, vispera) if clima_region is not None else pd.DataFrame()
     cond_caso_map = dict(zip(cond_caso["region_id"], cond_caso["condiciones"])) if len(cond_caso) else {}
     caso = {
         "fecha": CASO_FECHA, "horizonte_horas": 24,
         "descripcion": "Incendio de Viña del Mar, Quilpué y Villa Alemana (activo desde el 2 de febrero de 2024). "
-                       "Lista de prioridad que habría dado el sistema con los datos del día anterior.",
-        "items": [{"sector_id": x.sector_id, "comuna": x.comuna, "nivel_comuna": x.nivel,
-                   "prob_foco_comuna": round(float(x.prob_foco), 3), "exposicion": int(x.exposicion),
-                   "rasgos": list(x.rasgos), "condiciones_clima": list(cond_caso_map.get(x.region_id, [])),
+                       "Lista que habría dado el sistema con los datos del día anterior.",
+        "items": [{"sector_id": x.sector_id, "comuna": x.comuna, "tipo": x.tipo, "nivel_comuna": x.nivel,
+                   "prob_foco_comuna": round(float(x.prob_foco), 3), "motivo_orden": x.motivo_orden,
+                   "dist_foco_reciente_km": round(float(x.dist_foco_reciente_km), 1), "rasgos": list(x.rasgos),
+                   "condiciones_clima": list(cond_caso_map.get(x.region_id, [])),
                    "recomendaciones": recomendaciones_completas(list(x.rasgos), x.nivel, args.region,
                                                                 cond_caso_map.get(x.region_id, [])),
                    "tuvo_fuego_ese_dia": x.sector_id in con_fuego}
                   for x in lista_caso.itertuples()],
         "sectores_con_fuego_ese_dia": sorted(con_fuego),
     }
+    ruta_val = pr / f"alertas_validacion_{args.region}.json"
+    validacion = None
+    if ruta_val.exists():  # simulación 2020-2025 (paso 12d)
+        v = json.loads(ruta_val.read_text(encoding="utf-8"))["Prueba 2022-2025"]
+        pct_fuego = v["v0.5: % del fuego en todos los sectores listados"]
+        por_dia = v["v0.5: sectores listados por día"]
+        validacion = {
+            "periodo": "2022-2025", "pct_fuego_dia_siguiente_en_lista": pct_fuego,
+            "sectores_por_dia": por_dia, "pct_territorio_por_dia": round(100 * por_dia / len(s_v), 3),
+            "pct_fuego_en_lista_regla_anterior": v["v0.4: % del fuego en los sectores listados"],
+            "pct_dias_sin_alertas": v["v0.5: días con lista vacía (%)"],
+            "nota": f"Simulación 2022-2025: la lista marcó en promedio {por_dia:.0f} sectores por día "
+                    f"({100 * por_dia / len(s_v):.2f} % del territorio) y ahí ocurrió el {pct_fuego:.0f} % del fuego del "
+                    "día siguiente. La regla anterior, con 25 sectores fijos, cubría el "
+                    f"{v['v0.4: % del fuego en los sectores listados']:.0f} %.".replace(".", ",", 1),
+        }
     _json(publico / ARCHIVOS_SECTORES["alertas"].format(codigo_region=args.region),
-          alertas_region(args.region, por_horizonte, comunas, ahora, caso, cond_map))
+          alertas_region(args.region, por_horizonte, comunas, ahora, caso, cond_map, validacion))
     _json(publico / ARCHIVOS_SECTORES["recomendaciones"], catalogo_recomendaciones())
 
     # Manifest: rutas nuevas y lista de comunas con sectores
@@ -158,7 +197,9 @@ def main() -> int:
     tam = sum(p.stat().st_size for d in ("sectores", "alertas") for p in (publico / d).glob("*")) / 1e6
     print(f"Sectores: {len(codigos)} comunas, {len(sectores):,} sectores; {tam:.1f} MB en sectores/ y alertas/")
     for h, d in por_horizonte.items():
-        print(f"  alertas {h} h: {len(d)} sectores en {d['region_id'].nunique()} comunas; niveles {d['nivel'].value_counts().to_dict()}")
+        tipos = d.drop_duplicates("region_id")["tipo"].value_counts().to_dict() if len(d) else {}
+        print(f"  lista {h} h: {len(d)} sectores en {d['region_id'].nunique() if len(d) else 0} comunas; "
+              f"comunas por tipo {tipos}")
     acierto = sum(i["tuvo_fuego_ese_dia"] for i in caso["items"])
     print(f"  caso {CASO_FECHA}: {len(caso['items'])} sectores en la lista, {acierto} tuvieron focos ese día; "
           f"{len(con_fuego)} sectores con focos en total")
