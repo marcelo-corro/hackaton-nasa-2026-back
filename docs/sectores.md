@@ -59,9 +59,10 @@ Cada sector recibe, por horizonte, las recomendaciones de sus rasgos y del nivel
 | Disparador | Recomendación (fuente) |
 |---|---|
 | Comuna en nivel alto o muy alto, o cualquier condición de clima | Avisar al 130, 132 o 133 (CONAF Valparaíso) |
-| Interfaz | Despejar los alrededores de la vivienda (SENAPRED) |
+| Interfaz | Alrededores de la vivienda despejados de vegetación y desechos que se puedan quemar (SENAPRED) |
+| Interfaz con bosque o matorral | Poda: árboles enfermos, secos o a menos de 3 m de las casas; 2 a 3 m entre ramas bajas, suelo y viviendas (MINVU) |
 | Vegetación o interfaz | No hacer quemas (CONAF: restringidas en la región hasta el 31-05-2027); no botar colillas (SENAPRED) |
-| Interfaz con riesgo alto, historial o pendiente | Plan de barrio con zonas seguras y rutas de evacuación (MINVU); talleres Comunidad Preparada (CONAF) |
+| Interfaz con riesgo alto, historial o pendiente | Plan de barrio con zonas seguras y rutas de evacuación (MINVU); informarse del programa Comunidad Preparada (CONAF) |
 | Calor o viento (mes o umbral DMC) | Faena Cero: nada de herramientas que hagan chispas, en especial de 12:00 a 18:00 (CONAF) |
 | Calor, aire seco o viento | Evitar fuentes de calor cerca de la vegetación, globos de los deseos y fuegos artificiales (CONAF/SENAPRED) |
 

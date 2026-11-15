@@ -41,6 +41,10 @@ def test_recomendaciones_segun_rasgos_y_nivel() -> None:
     assert {"entorno_vivienda", "sin_quemas_05", "plan_barrio"} <= set(interfaz_alto)
     assert recomendaciones_sector(["pastizal"], "bajo", "13") == ["calendario_quemas", "sin_colillas"]
     assert recomendaciones_sector([], "bajo", "05") == []
+    # poda (MINVU) solo para casas junto a árboles: interfaz + bosque/matorral
+    assert "poda" in recomendaciones_sector(["interfaz", "bosque_matorral"], "bajo", "05")
+    assert "poda" not in recomendaciones_sector(["interfaz", "pastizal"], "bajo", "05")
+    assert "poda" not in recomendaciones_sector(["bosque_matorral"], "bajo", "05")
 
 
 def test_prioridad_ordena_comuna_luego_historial_y_excluye_persistentes() -> None:

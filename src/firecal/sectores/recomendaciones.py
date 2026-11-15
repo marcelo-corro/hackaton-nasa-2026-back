@@ -42,14 +42,16 @@ FUENTES = {
         "nombre": "CONAF, Actualización: situación del uso del fuego como quema controlada (consultado 14-11-2026)",
         "url": "https://www.conaf.cl/actualizacion-situacion-uso-del-fuego-en-regiones/"},
     "conaf_sitio": {"nombre": "CONAF, número de emergencias (pie del sitio oficial)", "url": "https://www.conaf.cl/"},
+    # Verificadas por Seba y Kathy leyendo el documento (15-11-2026): página y frase en docs/fuentes.md, sección 3c
     "senapred_preparate": {
-        "nombre": "SENAPRED, Prepárate con SENAPRED: incendios forestales",
+        "nombre": "SENAPRED, Prepárate con SENAPRED: incendios forestales (pág. 2)",
         "url": "https://bibliogrd.senapred.gob.cl/bitstream/handle/1671/8866/06_preparate_con_senapred_incendios_forestales_esp.pdf"},
     "minvu_barrios": {
-        "nombre": "MINVU, Chile se prepara: barrios (díptico, 2024)",
+        "nombre": "MINVU, Chile se prepara: barrios (díptico 2024, con recomendaciones de CONAF)",
         "url": "https://www.minvu.gob.cl/wp-content/uploads/2024/12/DIPTICO-chile-se-prepara-BARRIOS.pdf"},
     "conaf_comunidad": {
-        "nombre": "CONAF, programa Comunidad Preparada frente a los incendios forestales",
+        "nombre": "CONAF, programa Comunidad Preparada frente a los incendios forestales (nota de CONAF O'Higgins, "
+                  "2-5-2025)",
         "url": "https://www.conaf.cl/conaf-desarrolla-el-programa-comunidad-preparada-frente-a-los-incendios-forestales-con-vecinos-y-vecinas-de-zonas-de-interfaz/"},
     "conaf_faena_cero": {
         "nombre": "CONAF y Ministerio de Agricultura, llamado preventivo a aplicar Faena Cero (31-12-2025)",
@@ -64,8 +66,10 @@ FUENTES = {
 }
 
 RECOMENDACIONES = {
-    "entorno_vivienda": {"texto": "Mantener despejados de pasto seco, hojas y ramas los alrededores de las viviendas.",
-                         "fuente": "senapred_preparate"},
+    "entorno_vivienda": {"texto": "Mantener los alrededores de las viviendas despejados de vegetación y desechos que se "
+                                  "puedan quemar.", "fuente": "senapred_preparate"},
+    "poda": {"texto": "Podar los árboles enfermos, secos o a menos de 3 metros de las casas, y mantener 2 a 3 metros "
+                      "entre árboles, ramas inferiores, el suelo y las viviendas.", "fuente": "minvu_barrios"},
     "sin_colillas": {"texto": "No fumar ni botar colillas o fósforos cerca de la vegetación.",
                      "fuente": "senapred_preparate"},
     "sin_quemas_05": {"texto": "No hacer quemas: en la Región de Valparaíso el uso del fuego está restringido hasta el "
@@ -74,8 +78,9 @@ RECOMENDACIONES = {
                                    "Comprobante de Aviso de Quema en CONAF.", "fuente": "conaf_uso_fuego"},
     "plan_barrio": {"texto": "Organizar con la junta de vecinos un plan de prevención con zonas seguras y rutas de "
                              "evacuación despejadas.", "fuente": "minvu_barrios"},
-    "comunidad_preparada": {"texto": "Sumarse a los talleres de CONAF para zonas de interfaz (programa Comunidad "
-                                     "Preparada).", "fuente": "conaf_comunidad"},
+    "comunidad_preparada": {"texto": "Informarse sobre el programa Comunidad Preparada de CONAF, que prepara a "
+                                     "comunidades de zonas de interfaz con cuatro talleres de prevención.",
+                            "fuente": "conaf_comunidad"},
     "avisar_130": {"texto": "Ante cualquier foco, avisar de inmediato al 130 (CONAF), al 132 (Bomberos) o al 133 "
                             "(Carabineros).", "fuente": "conaf_valparaiso"},
     # Por condición del clima (comuna)
@@ -131,6 +136,8 @@ def recomendaciones_sector(rasgos: list[str], nivel_comuna: str, region: str) ->
         out.append("avisar_130")
     if "interfaz" in rasgos:
         out.append("entorno_vivienda")
+        if "bosque_matorral" in rasgos:  # casas junto a árboles: indicaciones de poda del MINVU
+            out.append("poda")
     if vegetacion or "interfaz" in rasgos:
         out.append("sin_quemas_05" if region in REGIONES_CON_QUEMAS_RESTRINGIDAS else "calendario_quemas")
         out.append("sin_colillas")

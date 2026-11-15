@@ -119,7 +119,8 @@ Solo los bloques que tocan las 36 comunas continentales de la región.
 ## 3c. Recomendaciones oficiales (textos de la app)
 
 Las recomendaciones por sector (`src/firecal/sectores/recomendaciones.py`, publicadas en `recomendaciones.json`) son
-textos generales tomados de estas fuentes. Donde no se pudo leer el documento completo, la recomendación no lleva cifras.
+textos tomados de estas fuentes. Las que no se pudieron leer en el PC del hackatón (PDF) las verificaron Seba y
+Kathy contra el documento (página y frase literal abajo); con eso se ajustaron dos textos y se sumó la poda (MINVU).
 
 | Fuente | URL | Qué se toma | Leído |
 |---|---|---|---|
@@ -128,9 +129,12 @@ textos generales tomados de estas fuentes. Donde no se pudo leer el documento co
 | CONAF y Ministerio de Agricultura, llamado a aplicar Faena Cero (31-12-2025) | https://www.conaf.cl/ministerio-de-agricultura-y-conaf-realizan-un-llamado-preventivo-a-aplicar-faena-cero-para-reducir-el-riesgo-de-incendios-forestales/ | Medida voluntaria: restringir faenas con maquinaria o herramientas que produzcan chispas o calor en las horas de mayor temperatura, en especial 12:00-18:00; respetar la prohibición de quemas; SENAPRED: evitar fuentes de calor cerca de la vegetación, globos de los deseos y fuegos artificiales | Completo (14-11-2026) |
 | CONAF, llamado a prevenir incendios en Valparaíso (11-12-2025) | https://www.conaf.cl/subsecretario-de-agricultura-refuerza-el-llamado-a-prevenir-incendios-forestales-en-valparaiso/ | Evitar galleteras, soldadoras y desbrozadoras en las horas de mayor temperatura, viento y menor humedad; despejar el perímetro de las viviendas; avisar al 130 (CONAF), 132 (Bomberos) o 133 (Carabineros) | Completo (14-11-2026) |
 | Dirección Meteorológica de Chile, variables asociadas al riesgo de incendios | https://climatologia.meteochile.gob.cl/application/diarioc/mapaRiesgoIncendiosHoy | Umbrales: temperatura > 30 °C, humedad relativa < 30 %, viento > 30 km/h ("30-30-30"); aclara que el producto no pronostica incendios | Completo (14-11-2026) |
-| SENAPRED, *Prepárate con SENAPRED: incendios forestales* | https://bibliogrd.senapred.gob.cl/bitstream/handle/1671/8866/06_preparate_con_senapred_incendios_forestales_esp.pdf | Mantener despejados los alrededores de la vivienda; no fumar ni botar colillas cerca de vegetación; evitar quemas | Por buscador (PDF no legible en el PC del hackatón): verificar antes de citar en el pitch |
-| MINVU, *Chile se prepara: barrios* (2024) | https://www.minvu.gob.cl/wp-content/uploads/2024/12/DIPTICO-chile-se-prepara-BARRIOS.pdf | Comité y plan de prevención con la junta de vecinos, zonas seguras, rutas de evacuación | Por buscador: verificar |
-| CONAF, programa Comunidad Preparada | https://www.conaf.cl/conaf-desarrolla-el-programa-comunidad-preparada-frente-a-los-incendios-forestales-con-vecinos-y-vecinas-de-zonas-de-interfaz/ | Talleres para vecinos de zonas de interfaz | Por buscador: verificar |
+| SENAPRED, *Prepárate con SENAPRED: incendios forestales* (sin fecha impresa; archivo de dic. 2024) | https://bibliogrd.senapred.gob.cl/bitstream/handle/1671/8866/06_preparate_con_senapred_incendios_forestales_esp.pdf | Pág. 2: «Mantén los alrededores de tu vivienda despejados de vegetación y desechos que se puedan quemar.» · «Evita fumar en lugares con vegetación que puedan arder. Nunca arrojes residuos de cigarrillos ni fósforos.» | Verificado por Seba y Kathy (15-11-2026) |
+| MINVU, *Chile se prepara: barrios* (con recomendaciones de CONAF; sin fecha impresa, archivo de dic. 2024) | https://www.minvu.gob.cl/wp-content/uploads/2024/12/DIPTICO-chile-se-prepara-BARRIOS.pdf | Pág. 1: conformar comité de prevención con juntas de vecinos, plan de acción, zonas seguras y vías de evacuación despejadas; poda de árboles enfermos, secos o a menos de 3 m de edificaciones. Pág. 2: «manteniendo un espacio de 2 a 3 metros entre árboles, ramas inferiores, el suelo y las viviendas o edificaciones» (son indicaciones de poda, no un radio de despeje) | Verificado por Seba y Kathy (15-11-2026) |
+| CONAF, programa Comunidad Preparada (nota de CONAF Región de O'Higgins, 2-5-2025) | https://www.conaf.cl/conaf-desarrolla-el-programa-comunidad-preparada-frente-a-los-incendios-forestales-con-vecinos-y-vecinas-de-zonas-de-interfaz/ | Sección "Fortaleciendo vulnerabilidades": «el programa consta de cuatro talleres» para comunidades de zonas de interfaz | Verificado por Seba y Kathy (15-11-2026) |
+
+**Dato para el pitch** (verificado por Seba y Kathy): «En Chile, el 99% de los incendios forestales son originados por
+causas humanas» (SENAPRED, *Prepárate con SENAPRED: incendios forestales*, pág. 6).
 
 ## 4. Fuentes documentales de los informes
 
