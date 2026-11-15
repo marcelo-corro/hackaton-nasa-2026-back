@@ -30,6 +30,11 @@ Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
   0,585 (×1,10 → ×1,12 sobre la climatología); a 24 h, de 0,321 a 0,344 (+7 %). Un pronóstico real rinde menos. A 7
   días no lo justifica; a 24 h podría servir cuando haya focos en tiempo real (MAP_KEY). Script:
   `_retomar/pronostico_cota.py` (fuera del repo).
+- **Recomendaciones por clima:** además de las de cada sector, se suman las del clima del último día en la comuna:
+  Faena Cero con calor o viento, evitar fuentes de calor con calor, aire seco o viento, y avisar al 130/132/133. Las
+  fuentes son CONAF (Faena Cero, llamado en Valparaíso) y la Dirección Meteorológica de Chile (umbrales 30-30-30),
+  leídas completas. Las condiciones combinan percentiles del mes y los umbrales absolutos de la DMC; con NASA POWER
+  son una referencia.
 - **Contrato v0.3 (aditivo):** suma `riesgo/48h.json`, `riesgo/7d.json`, `sectores/{id}.geojson`,
   `sectores/{id}_focos.csv`, `alertas/{región}.json` y `recomendaciones.json`. Los archivos de la v0.2 no cambian.
 

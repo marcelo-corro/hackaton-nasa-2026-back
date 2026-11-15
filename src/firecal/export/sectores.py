@@ -12,8 +12,8 @@ from shapely.geometry import mapping
 
 from firecal.export.contrato import VERSION_CONTRATO
 from firecal.sectores.recomendaciones import (
-    FACTORES_EXPOSICION, FUENTES, RASGOS, RECOMENDACIONES, UMBRAL_BOSQUE, UMBRAL_HISTORIAL_DIAS, UMBRAL_INTERFAZ,
-    UMBRAL_PASTIZAL, UMBRAL_PENDIENTE, recomendaciones_sector,
+    CONDICIONES, FACTORES_EXPOSICION, FUENTES, RASGOS, RECOMENDACIONES, UMBRAL_BOSQUE, UMBRAL_HISTORIAL_DIAS,
+    UMBRAL_INTERFAZ, UMBRAL_PASTIZAL, UMBRAL_PENDIENTE, recomendaciones_clima, recomendaciones_completas,
 )
 
 TOLERANCIA_SECTORES = 0.0002  # grados (~20 m)
@@ -65,9 +65,11 @@ def riesgo_horizonte(riesgo: pd.DataFrame, horas: int, info: dict, calculado_utc
     }
 
 
-def sectores_geojson(sectores_comuna, niveles: dict[int, str], codigo_region: str) -> dict:
+def sectores_geojson(sectores_comuna, niveles: dict[int, str], codigo_region: str,
+                     condiciones: list[str] | None = None) -> dict:
     """sectores/{region_id}.geojson: un Feature por sector, en WGS84, con rasgos, capas, historial y
-    recomendaciones por horizonte (dependen del nivel de la comuna: `niveles` = {horas: nivel})."""
+    recomendaciones por horizonte: las del sector (según el nivel de la comuna, `niveles` = {horas: nivel}) más las
+    del clima del último día en la comuna (`condiciones`)."""
     g = sectores_comuna.to_crs("EPSG:4326")
     feats = []
     for s, geom in zip(g.itertuples(), g.geometry):
@@ -83,7 +85,8 @@ def sectores_geojson(sectores_comuna, niveles: dict[int, str], codigo_region: st
             "pendiente_media": None if pd.isna(s.pendiente_media) else round(float(s.pendiente_media), 1),
             "dias_con_fuego": int(s.dias_con_fuego), "focos": int(s.focos), "ultimo_fuego": _fecha(s.ultimo_fuego),
             "incendios_grandes": int(s.incendios_grandes), "mayor_incendio_focos": int(s.mayor_incendio_focos),
-            "recomendaciones": {str(h): recomendaciones_sector(rasgos, n, codigo_region) for h, n in niveles.items()},
+            "recomendaciones": {str(h): recomendaciones_completas(rasgos, n, codigo_region, condiciones)
+                                for h, n in niveles.items()},
         }})
     return {"type": "FeatureCollection", "contrato": VERSION_CONTRATO, "ejemplo": False,
             "region_id": str(sectores_comuna["region_id"].iloc[0]), "features": feats}
@@ -99,24 +102,28 @@ def focos_sector_csv(focos: pd.DataFrame) -> str:
     return f.to_csv(index=False, lineterminator="\n")
 
 
-def _item_alerta(s: pd.Series, codigo_region: str) -> dict:
+def _item_alerta(s: pd.Series, codigo_region: str, condiciones: dict[str, list[str]]) -> dict:
     return {"sector_id": s["sector_id"], "region_id": s["region_id"], "comuna": s["comuna"],
             "nivel_comuna": s["nivel"], "prob_foco_comuna": round(float(s["prob_foco"]), 3),
             "exposicion": int(s["exposicion"]), "rasgos": list(s["rasgos"]),
             "lat": float(s["lat"]), "lon": float(s["lon"]),
-            "recomendaciones": recomendaciones_sector(list(s["rasgos"]), s["nivel"], codigo_region)}
+            "recomendaciones": recomendaciones_completas(list(s["rasgos"]), s["nivel"], codigo_region,
+                                                         condiciones.get(s["region_id"], []))}
 
 
 def alertas_region(codigo_region: str, por_horizonte: dict[int, pd.DataFrame], comunas: list[dict],
-                   calculado_utc: str, caso: dict | None = None) -> dict:
-    """alertas/{codigo_region}.json: sectores a priorizar por horizonte y resumen por comuna."""
+                   calculado_utc: str, caso: dict | None = None,
+                   condiciones: dict[str, list[str]] | None = None) -> dict:
+    """alertas/{codigo_region}.json: sectores a priorizar por horizonte y resumen por comuna.
+    `condiciones` = {region_id: [códigos de condición del clima]} para sumar las recomendaciones por clima."""
+    condiciones = condiciones or {}
     return {
         "contrato": VERSION_CONTRATO, "ejemplo": False, "calculado_utc": calculado_utc,
         "codigo_region": codigo_region,
         "nota": "Orden de prioridad: comunas con mayor riesgo y, dentro de ellas, sectores con más factores de "
                 "exposición (interfaz, vegetación, pendiente, historial). No es la probabilidad de que ese sector se "
                 "queme.",
-        "horizontes": {str(h): [_item_alerta(s, codigo_region) for _, s in d.iterrows()]
+        "horizontes": {str(h): [_item_alerta(s, codigo_region, condiciones) for _, s in d.iterrows()]
                        for h, d in por_horizonte.items()},
         "comunas": comunas,
         "caso": caso,
@@ -128,6 +135,7 @@ def catalogo_recomendaciones() -> dict:
     return {
         "contrato": VERSION_CONTRATO, "ejemplo": False,
         "rasgos": RASGOS,
+        "condiciones": CONDICIONES,
         "recomendaciones": {k: {"texto": v["texto"], "fuente": v["fuente"]} for k, v in RECOMENDACIONES.items()},
         "fuentes": FUENTES,
         "umbrales_rasgos": {"interfaz_pct": 100 * UMBRAL_INTERFAZ, "pastizal_pct": 100 * UMBRAL_PASTIZAL,
@@ -152,8 +160,8 @@ def niveles_por_comuna(riesgo: pd.DataFrame) -> dict[str, dict[int, str]]:
 
 
 def resumen_comunas(riesgo: pd.DataFrame, condiciones: pd.DataFrame, nombres: dict[str, str],
-                    codigos: list[str]) -> list[dict]:
-    """Por comuna del piloto: riesgo en cada horizonte y condiciones del clima observado del último día."""
+                    codigos: list[str], codigo_region: str) -> list[dict]:
+    """Por comuna del piloto: riesgo en cada horizonte, clima observado del último día y recomendaciones por clima."""
     r = riesgo[riesgo["valido_para"] == riesgo["valido_para"].max()]
     cond = condiciones.set_index("region_id") if len(condiciones) else pd.DataFrame()
     out = []
@@ -165,5 +173,6 @@ def resumen_comunas(riesgo: pd.DataFrame, condiciones: pd.DataFrame, nombres: di
         out.append({"region_id": rid, "nombre": nombres.get(rid),
                     "riesgo": {str(int(x.horizonte_horas)): {"prob_foco": round(float(x.prob_foco), 3),
                                                              "nivel": str(x.nivel)} for x in rr.itertuples()},
-                    "clima_ultimo_dia": c})
+                    "clima_ultimo_dia": c,
+                    "recomendaciones_clima": recomendaciones_clima(c["condiciones"] if c else [], codigo_region)})
     return out

@@ -31,7 +31,9 @@ from firecal.export.sectores import (  # noqa: E402
     resumen_comunas, riesgo_horizonte, sectores_geojson,
 )
 from firecal.model.variables import bloque_clima  # noqa: E402
-from firecal.sectores.recomendaciones import condiciones_clima, prioridad_alertas, rasgos_sector  # noqa: E402
+from firecal.sectores.recomendaciones import (  # noqa: E402
+    condiciones_clima, prioridad_alertas, rasgos_sector, recomendaciones_completas,
+)
 
 CASO_FECHA = "2024-02-04"  # incendio de Viña del Mar, Quilpué y Villa Alemana, activo desde el 2 de febrero
 
@@ -70,21 +72,25 @@ def main() -> int:
     for horas, clave in ((48, "riesgo_48h"), (168, "riesgo_7d")):
         _json(publico / ARCHIVOS_SECTORES[clave], riesgo_horizonte(riesgo, horas, info, ahora))
 
+    # Clima observado del último día por comuna (condiciones y recomendaciones por clima)
+    ultimo = riesgo[riesgo["valido_para"] == riesgo["valido_para"].max()]
+    fecha_clima = pd.Timestamp(ultimo["valido_para"].max()) - pd.Timedelta(days=1)
+    clima_region = clima[clima["region_id"].isin(codigos)] if clima is not None else None
+    cond = condiciones_clima(clima_region, fecha_clima) if clima_region is not None else pd.DataFrame()
+    cond_map = dict(zip(cond["region_id"], cond["condiciones"])) if len(cond) else {}
+
     # Sectores y focos por comuna
     for rid in codigos:
         s = sectores[sectores["region_id"] == rid]
         _json(publico / ARCHIVOS_SECTORES["sectores"].format(region_id=rid),
-              sectores_geojson(s, niveles.get(rid, {}), args.region))
+              sectores_geojson(s, niveles.get(rid, {}), args.region, cond_map.get(rid, [])))
         f = focos[focos["region_id"].astype(str) == rid]
         ruta = publico / ARCHIVOS_SECTORES["sectores_focos"].format(region_id=rid)
         ruta.write_text(focos_sector_csv(f), encoding="utf-8")
 
     # Alertas por horizonte (valido_para más reciente)
-    ultimo = riesgo[riesgo["valido_para"] == riesgo["valido_para"].max()]
     por_horizonte = {h: prioridad_alertas(sectores, ultimo[ultimo["horizonte_horas"] == h]) for h in (24, 48, 168)}
-    fecha_clima = pd.Timestamp(ultimo["valido_para"].max()) - pd.Timedelta(days=1)
-    cond = condiciones_clima(clima[clima["region_id"].isin(codigos)], fecha_clima) if clima is not None else pd.DataFrame()
-    comunas = resumen_comunas(riesgo, cond, nombres, codigos)
+    comunas = resumen_comunas(riesgo, cond, nombres, codigos, args.region)
 
     # Caso histórico: cómo se habría visto la lista de prioridad (24 h) y qué pasó ese día
     bt = backtest[(backtest["valido_para"] == pd.Timestamp(CASO_FECHA)) & backtest["region_id"].isin(codigos)]
@@ -99,18 +105,24 @@ def main() -> int:
     s_caso["rasgos"] = rasgos_sector(s_caso)
     lista_caso = prioridad_alertas(s_caso, bt)
     con_fuego = set(focos.loc[focos["fecha_local"].dt.normalize() == pd.Timestamp(CASO_FECHA), "sector_id"])
+    vispera = pd.Timestamp(CASO_FECHA) - pd.Timedelta(days=1)
+    cond_caso = condiciones_clima(clima_region, vispera) if clima_region is not None else pd.DataFrame()
+    cond_caso_map = dict(zip(cond_caso["region_id"], cond_caso["condiciones"])) if len(cond_caso) else {}
     caso = {
         "fecha": CASO_FECHA, "horizonte_horas": 24,
         "descripcion": "Incendio de Viña del Mar, Quilpué y Villa Alemana (activo desde el 2 de febrero de 2024). "
                        "Lista de prioridad que habría dado el sistema con los datos del día anterior.",
         "items": [{"sector_id": x.sector_id, "comuna": x.comuna, "nivel_comuna": x.nivel,
                    "prob_foco_comuna": round(float(x.prob_foco), 3), "exposicion": int(x.exposicion),
-                   "rasgos": list(x.rasgos), "tuvo_fuego_ese_dia": x.sector_id in con_fuego}
+                   "rasgos": list(x.rasgos), "condiciones_clima": list(cond_caso_map.get(x.region_id, [])),
+                   "recomendaciones": recomendaciones_completas(list(x.rasgos), x.nivel, args.region,
+                                                                cond_caso_map.get(x.region_id, [])),
+                   "tuvo_fuego_ese_dia": x.sector_id in con_fuego}
                   for x in lista_caso.itertuples()],
         "sectores_con_fuego_ese_dia": sorted(con_fuego),
     }
     _json(publico / ARCHIVOS_SECTORES["alertas"].format(codigo_region=args.region),
-          alertas_region(args.region, por_horizonte, comunas, ahora, caso))
+          alertas_region(args.region, por_horizonte, comunas, ahora, caso, cond_map))
     _json(publico / ARCHIVOS_SECTORES["recomendaciones"], catalogo_recomendaciones())
 
     # Manifest: rutas nuevas y lista de comunas con sectores
@@ -127,6 +139,8 @@ def main() -> int:
     acierto = sum(i["tuvo_fuego_ese_dia"] for i in caso["items"])
     print(f"  caso {CASO_FECHA}: {len(caso['items'])} sectores en la lista, {acierto} tuvieron focos ese día; "
           f"{len(con_fuego)} sectores con focos en total")
+    print(f"  clima {fecha_clima.date()}: condiciones por comuna {dict(cond_map)}")
+    print(f"  clima víspera del caso ({vispera.date()}): " + str({k: v for k, v in cond_caso_map.items() if v}))
     print(f"Manifest actualizado a contrato {VERSION_CONTRATO}")
     return 0
 

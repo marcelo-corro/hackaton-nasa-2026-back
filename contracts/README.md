@@ -182,7 +182,7 @@ Misma forma que `riesgo/ultimo.json` (todas las comunas del país), más:
 | `pendiente_media` | grados | |
 | `dias_con_fuego`, `focos`, `incendios_grandes`, `mayor_incendio_focos` | entero | historial 2012-2025 (VIIRS Suomi NPP) |
 | `ultimo_fuego` | `YYYY-MM-DD` o `null` | |
-| `recomendaciones` | objeto | `{"24": [...], "48": [...], "168": [...]}`: códigos de recomendación según el nivel de la comuna en cada horizonte |
+| `recomendaciones` | objeto | `{"24": [...], "48": [...], "168": [...]}`: códigos de recomendación según los rasgos del sector, el nivel de la comuna en cada horizonte y el clima del último día en la comuna ("avisar" siempre primero) |
 
 **El sector no tiene probabilidad.** Para colorear el mapa usar el historial (`dias_con_fuego`) o un rasgo, con la
 leyenda "historial" o "qué hay en el sector", nunca "probabilidad".
@@ -202,11 +202,13 @@ industriales persistentes). `focos_incendio` = tamaño del incendio al que perte
                          "rasgos": ["pastizal", "historial"], "lat": -33.289, "lon": -71.394,
                          "recomendaciones": ["avisar_130", "sin_quemas_05", "sin_colillas"]}],
                  "48": [], "168": []},
-  "comunas": [{"region_id": "05101", "nombre": "Valparaíso",
+  "comunas": [{"region_id": "05109", "nombre": "Viña del Mar",
                "riesgo": {"24": {"prob_foco": 0.01, "nivel": "bajo"}, "48": {}, "168": {}},
-               "clima_ultimo_dia": {"fecha_clima": "2025-12-31", "tmax": 18.8, "tmax_percentil": 84, "hrmin": 80,
-                                    "hrmin_percentil": 93, "viento_max": 4.8, "viento_percentil": 9,
-                                    "dias_sin_lluvia": 88, "dias_sin_lluvia_percentil": 50, "condiciones": []}}],
+               "clima_ultimo_dia": {"fecha_clima": "2025-12-31", "tmax": 30.6, "tmax_percentil": 97, "hrmin": 25,
+                                    "hrmin_percentil": 12, "viento_max": 5.0, "viento_max_kmh": 17.9,
+                                    "viento_percentil": 40, "dias_sin_lluvia": 88, "dias_sin_lluvia_percentil": 50,
+                                    "condiciones": ["calor", "temp_sobre_30", "humedad_bajo_30"]},
+               "recomendaciones_clima": ["avisar_130", "faena_cero", "sin_fuentes_calor", "sin_quemas_05"]}],
   "caso": {"fecha": "2024-02-04", "items": [{"...": "...", "tuvo_fuego_ese_dia": false}],
            "sectores_con_fuego_ese_dia": ["..."]}
 }
@@ -214,11 +216,19 @@ industriales persistentes). `focos_incendio` = tamaño del incendio al que perte
 
 - Listas en orden de prioridad (hasta 25, máximo 5 por comuna): comunas con mayor nivel y probabilidad; dentro, sectores
   con más días con fuego previos y, a igualdad, más interfaz. **No** es la probabilidad de que ese sector se queme.
-- `condiciones`: códigos `calor`, `aire_seco`, `viento`, `sin_lluvia` (percentil extremo contra el mismo mes).
+- `condiciones` (texto de cada código en `recomendaciones.json → condiciones`): `calor`, `aire_seco`, `viento`,
+  `sin_lluvia` (entre el 10 % más extremo para ese mes) y los umbrales de la Dirección Meteorológica de Chile
+  `temp_sobre_30`, `humedad_bajo_30`, `viento_sobre_30` y `condicion_30_30_30` (los tres juntos). Clima de NASA POWER
+  (~50 km, humedad mínima aproximada): es una referencia, no una medición local. `viento_max` en m/s y
+  `viento_max_kmh` en km/h.
+- `recomendaciones_clima`: códigos de recomendación por el clima de la comuna (Faena Cero de CONAF, fuentes de calor,
+  quemas, avisar). Ya vienen sumadas en las `recomendaciones` de cada sector y de cada alerta: el front no tiene que
+  combinarlas.
 - `caso`: cómo se habría visto la lista el 4-feb-2024 y qué sectores tuvieron fuego. Ese día ninguno de la lista lo
   tuvo (ver `docs/sectores.md`): si se muestra, mostrarlo así.
 
 ### recomendaciones.json
 
-`rasgos` (código → texto), `recomendaciones` (código → `{texto, fuente}`), `fuentes` (código → `{nombre, url}`),
-`umbrales_rasgos` y `fuentes_capas`. El front muestra el texto y enlaza la fuente; no inventa recomendaciones.
+`rasgos` (código → texto), `condiciones` (código → `{texto, fuente}`; `fuente` es `null` en las relativas al mes),
+`recomendaciones` (código → `{texto, fuente}`), `fuentes` (código → `{nombre, url}`), `umbrales_rasgos` y
+`fuentes_capas`. El front muestra el texto y enlaza la fuente; no inventa recomendaciones.

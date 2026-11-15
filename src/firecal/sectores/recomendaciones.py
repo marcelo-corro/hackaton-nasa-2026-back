@@ -51,6 +51,16 @@ FUENTES = {
     "conaf_comunidad": {
         "nombre": "CONAF, programa Comunidad Preparada frente a los incendios forestales",
         "url": "https://www.conaf.cl/conaf-desarrolla-el-programa-comunidad-preparada-frente-a-los-incendios-forestales-con-vecinos-y-vecinas-de-zonas-de-interfaz/"},
+    "conaf_faena_cero": {
+        "nombre": "CONAF y Ministerio de Agricultura, llamado preventivo a aplicar Faena Cero (31-12-2025)",
+        "url": "https://www.conaf.cl/ministerio-de-agricultura-y-conaf-realizan-un-llamado-preventivo-a-aplicar-faena-cero-para-reducir-el-riesgo-de-incendios-forestales/"},
+    "conaf_valparaiso": {
+        "nombre": "CONAF, llamado a prevenir incendios forestales en Valparaíso (11-12-2025)",
+        "url": "https://www.conaf.cl/subsecretario-de-agricultura-refuerza-el-llamado-a-prevenir-incendios-forestales-en-valparaiso/"},
+    "dmc_umbrales": {
+        "nombre": "Dirección Meteorológica de Chile, monitoreo de variables meteorológicas asociadas al riesgo de "
+                  "incendios forestales",
+        "url": "https://climatologia.meteochile.gob.cl/application/diarioc/mapaRiesgoIncendiosHoy"},
 }
 
 RECOMENDACIONES = {
@@ -66,8 +76,35 @@ RECOMENDACIONES = {
                              "evacuación despejadas.", "fuente": "minvu_barrios"},
     "comunidad_preparada": {"texto": "Sumarse a los talleres de CONAF para zonas de interfaz (programa Comunidad "
                                      "Preparada).", "fuente": "conaf_comunidad"},
-    "avisar_130": {"texto": "Ante humo o fuego, avisar de inmediato al 130 (CONAF).", "fuente": "conaf_sitio"},
+    "avisar_130": {"texto": "Ante cualquier foco, avisar de inmediato al 130 (CONAF), al 132 (Bomberos) o al 133 "
+                            "(Carabineros).", "fuente": "conaf_valparaiso"},
+    # Por condición del clima (comuna)
+    "faena_cero": {"texto": "Evitar trabajos con maquinaria o herramientas que produzcan chispas o calor (galleteras, "
+                            "soldadoras, desbrozadoras) en las horas de mayor temperatura, en especial entre las 12:00 "
+                            "y las 18:00.", "fuente": "conaf_faena_cero"},
+    "sin_fuentes_calor": {"texto": "Evitar fuentes de calor cerca de la vegetación; no usar globos de los deseos ni "
+                                   "fuegos artificiales.", "fuente": "conaf_faena_cero"},
 }
+
+# Condiciones del clima observado del último día (comuna). Las relativas comparan con el mismo mes de 2012-2025; las
+# absolutas usan los umbrales de la Dirección Meteorológica de Chile (que aclara que no pronostica incendios). Con
+# NASA POWER (~50 km, humedad mínima aproximada) son una referencia, no una medición local.
+CONDICIONES = {
+    "calor": {"texto": "Temperatura máxima entre el 10 % más alto para este mes", "fuente": None},
+    "aire_seco": {"texto": "Humedad entre el 10 % más bajo para este mes", "fuente": None},
+    "viento": {"texto": "Viento entre el 10 % más fuerte para este mes", "fuente": None},
+    "sin_lluvia": {"texto": "Racha sin lluvia entre el 10 % más larga para este mes", "fuente": None},
+    "temp_sobre_30": {"texto": "Temperatura máxima sobre 30 °C", "fuente": "dmc_umbrales"},
+    "humedad_bajo_30": {"texto": "Humedad mínima bajo 30 % (aproximada)", "fuente": "dmc_umbrales"},
+    "viento_sobre_30": {"texto": "Viento máximo sobre 30 km/h", "fuente": "dmc_umbrales"},
+    "condicion_30_30_30": {"texto": "Se superan los tres umbrales de la Dirección Meteorológica (más de 30 °C, humedad "
+                                    "bajo 30 %, viento sobre 30 km/h): condiciones favorables a la propagación. No es "
+                                    "un pronóstico de incendio.", "fuente": "dmc_umbrales"},
+}
+CONDICIONES_CALOR = {"calor", "temp_sobre_30", "condicion_30_30_30"}
+CONDICIONES_VIENTO = {"viento", "viento_sobre_30", "condicion_30_30_30"}
+CONDICIONES_SECO = {"aire_seco", "humedad_bajo_30", "condicion_30_30_30"}
+KMH_POR_MS = 3.6
 REGIONES_CON_QUEMAS_RESTRINGIDAS = {"05"}  # según CONAF al 14-11-2026 (hasta el 31-05-2027)
 ORDEN_NIVEL = {"bajo": 0, "medio": 1, "alto": 2, "muy_alto": 3}
 
@@ -103,6 +140,28 @@ def recomendaciones_sector(rasgos: list[str], nivel_comuna: str, region: str) ->
     return out
 
 
+def recomendaciones_clima(condiciones: list[str], region: str) -> list[str]:
+    """Códigos de recomendación por el clima del último día en la comuna (Faena Cero y fuentes de calor de CONAF)."""
+    c = set(condiciones)
+    out = []
+    if c:
+        out.append("avisar_130")
+    if c & (CONDICIONES_CALOR | CONDICIONES_VIENTO):
+        out.append("faena_cero")
+    if c & (CONDICIONES_CALOR | CONDICIONES_SECO | CONDICIONES_VIENTO):
+        out.append("sin_fuentes_calor")
+        out.append("sin_quemas_05" if region in REGIONES_CON_QUEMAS_RESTRINGIDAS else "calendario_quemas")
+    return out
+
+
+def recomendaciones_completas(rasgos: list[str], nivel_comuna: str, region: str,
+                              condiciones: list[str] | None = None) -> list[str]:
+    """Las del sector (rasgos + nivel) y las del clima de la comuna, sin repetir; "avisar" siempre primero."""
+    todas = recomendaciones_clima(condiciones or [], region) + recomendaciones_sector(rasgos, nivel_comuna, region)
+    unicas = list(dict.fromkeys(todas))
+    return sorted(unicas, key=lambda r: r != "avisar_130")
+
+
 def prioridad_alertas(sectores: pd.DataFrame, riesgo_comuna: pd.DataFrame, n: int = 25) -> pd.DataFrame:
     """Sectores a priorizar: primero las comunas con mayor nivel y probabilidad; dentro, los sectores con más días con
     fuego previos y, a igualdad, más interfaz (orden validado, ver docstring del módulo). Excluye fuentes
@@ -126,7 +185,9 @@ def condiciones_clima(clima: pd.DataFrame, fecha: pd.Timestamp) -> pd.DataFrame:
     `clima` viene de firecal.model.variables.bloque_clima (region_id, fecha, tmax, hrmin, viento_max, precip,
     precip_7d, dias_sin_lluvia). Devuelve una fila por comuna con valores, percentiles y marcas de condición extrema
     (calor: tmax >= p90; aire seco: hrmin <= p10; viento: viento_max >= p90; sin lluvia: días sin lluvia >= p90).
-    Todo contra el mismo mes, porque en verano casi todo Chile central pasa semanas sin llover.
+    Todo contra el mismo mes, porque en verano casi todo Chile central pasa semanas sin llover. Suma las marcas de
+    los umbrales de la DMC (>30 °C, <30 % de humedad, >30 km/h) y `condicion_30_30_30` si se cumplen los tres.
+    `viento_max` viene en m/s (NASA POWER); se publica también en km/h.
     """
     c = clima.copy()
     c["mes"] = c["fecha"].dt.month
@@ -142,13 +203,18 @@ def condiciones_clima(clima: pd.DataFrame, fecha: pd.Timestamp) -> pd.DataFrame:
             return float(100 * ((v < x).sum() + 0.5 * (v == x).sum()) / len(v)) if len(v) and pd.notna(x) else np.nan
 
         p_t, p_h, p_v, p_s = pct("tmax"), pct("hrmin"), pct("viento_max"), pct("dias_sin_lluvia")
+        kmh = float(r.viento_max) * KMH_POR_MS
+        dmc = {"temp_sobre_30": r.tmax > 30, "humedad_bajo_30": r.hrmin < 30, "viento_sobre_30": kmh > 30}
+        relativas = {"calor": p_t >= 90, "aire_seco": p_h <= 10, "viento": p_v >= 90, "sin_lluvia": p_s >= 90}
+        condiciones = [k for k, ok in (relativas | dmc).items() if ok]
+        if all(dmc.values()):
+            condiciones.append("condicion_30_30_30")
         filas.append({
             "region_id": r.region_id, "fecha_clima": fecha.strftime("%Y-%m-%d"),
             "tmax": round(float(r.tmax), 1), "tmax_percentil": round(p_t),
             "hrmin": round(float(r.hrmin), 0), "hrmin_percentil": round(p_h),
-            "viento_max": round(float(r.viento_max), 1), "viento_percentil": round(p_v),
+            "viento_max": round(float(r.viento_max), 1), "viento_max_kmh": round(kmh, 1), "viento_percentil": round(p_v),
             "dias_sin_lluvia": int(r.dias_sin_lluvia), "dias_sin_lluvia_percentil": round(p_s),
-            "condiciones": [k for k, ok in (("calor", p_t >= 90), ("aire_seco", p_h <= 10), ("viento", p_v >= 90),
-                                            ("sin_lluvia", p_s >= 90)) if ok],
+            "condiciones": condiciones,
         })
     return pd.DataFrame(filas)

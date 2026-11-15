@@ -4,7 +4,8 @@ from shapely.geometry import box
 
 from firecal.export.sectores import niveles_por_comuna, riesgo_horizonte, sectores_geojson
 from firecal.sectores.recomendaciones import (
-    condiciones_clima, prioridad_alertas, rasgos_sector, recomendaciones_sector,
+    CONDICIONES, RECOMENDACIONES, condiciones_clima, prioridad_alertas, rasgos_sector, recomendaciones_clima,
+    recomendaciones_completas, recomendaciones_sector,
 )
 
 
@@ -80,3 +81,34 @@ def test_condiciones_clima_percentil_del_mismo_mes() -> None:
     d = condiciones_clima(c, pd.Timestamp("2025-12-31")).iloc[0]
     assert d["tmax_percentil"] >= 90 and "calor" in d["condiciones"]
     assert "sin_lluvia" not in d["condiciones"]  # 60 días sin lluvia es lo normal en ese mes
+    assert "temp_sobre_30" in d["condiciones"]  # 35 °C
+    assert "condicion_30_30_30" not in d["condiciones"]  # humedad 50 % y viento 18 km/h
+
+
+def test_condicion_30_30_30_con_viento_en_m_por_s() -> None:
+    c = pd.DataFrame({"region_id": "05109", "fecha": pd.to_datetime(["2024-02-02", "2024-02-03"]),
+                      "tmax": [25.0, 33.0], "hrmin": [60.0, 25.0], "viento_max": [3.0, 9.0],  # 9 m/s = 32,4 km/h
+                      "precip": 0.0, "precip_7d": 0.0, "dias_sin_lluvia": 30})
+    d = condiciones_clima(c, pd.Timestamp("2024-02-03")).iloc[0]
+    assert d["viento_max_kmh"] == 32.4
+    assert {"temp_sobre_30", "humedad_bajo_30", "viento_sobre_30", "condicion_30_30_30"} <= set(d["condiciones"])
+
+
+def test_recomendaciones_por_clima() -> None:
+    assert recomendaciones_clima([], "05") == []
+    calor = recomendaciones_clima(["calor"], "05")
+    assert calor == ["avisar_130", "faena_cero", "sin_fuentes_calor", "sin_quemas_05"]
+    assert "faena_cero" not in recomendaciones_clima(["aire_seco"], "05")  # Faena Cero: calor o viento
+    assert recomendaciones_clima(["sin_lluvia"], "13") == ["avisar_130"]
+    # se combinan con las del sector sin repetir y con "avisar" primero
+    todas = recomendaciones_completas(["interfaz"], "bajo", "05", ["viento"])
+    assert todas[0] == "avisar_130" and len(todas) == len(set(todas)) and "entorno_vivienda" in todas
+
+
+def test_catalogo_cubre_todos_los_codigos() -> None:
+    from firecal.sectores.recomendaciones import FUENTES
+
+    for r in RECOMENDACIONES.values():
+        assert r["fuente"] in FUENTES
+    for c in CONDICIONES.values():
+        assert c["fuente"] is None or c["fuente"] in FUENTES

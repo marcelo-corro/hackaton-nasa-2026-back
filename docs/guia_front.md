@@ -63,7 +63,10 @@ Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el c
   fuego y último fuego, y las recomendaciones del horizonte elegido (`recomendaciones[horizonte]`) con el enlace a
   su fuente oficial.
 - **Alertas arriba:** `alertas/05.json → horizontes[h]`, en el orden en que vienen; mostrar `nota`. Junto a cada
-  comuna, las condiciones del clima (`comunas[].clima_ultimo_dia.condiciones`: calor, aire seco, viento, sin lluvia).
+  comuna, las condiciones del clima (`comunas[].clima_ultimo_dia.condiciones`, texto en
+  `recomendaciones.json → condiciones`) y sus `recomendaciones_clima` (por ejemplo, Faena Cero de CONAF con calor).
+  Si aparece `condicion_30_30_30`, destacarla, sin decir que "habrá incendio" (la DMC aclara que no lo pronostica).
+  Las recomendaciones de cada sector y alerta ya incluyen las del clima.
 - **Caso 2024 (opcional):** `caso` muestra la lista del 4-feb-2024 y qué sectores tuvieron fuego (ninguno de la lista
   lo tuvo). Si se usa, contarlo así: el riesgo por comuna acertó (Viña `muy_alto`), la ubicación dentro de la comuna no.
 

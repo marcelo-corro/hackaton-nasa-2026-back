@@ -50,6 +50,28 @@ comuna todavía las incluye en su objetivo (por ejemplo, Concón suma 130 días 
 | `historial` | fuego en ≥ 2 días desde 2012 o algún incendio grande |
 | `fuente_persistente` | sección 2 |
 
+## 3b. Recomendaciones
+
+Cada sector recibe, por horizonte, las recomendaciones de sus rasgos y del nivel de la comuna, más las del clima del
+último día en la comuna (`firecal.sectores.recomendaciones`; textos y fuentes en `recomendaciones.json` y
+`docs/fuentes.md`, sección 3c).
+
+| Disparador | Recomendación (fuente) |
+|---|---|
+| Comuna en nivel alto o muy alto, o cualquier condición de clima | Avisar al 130, 132 o 133 (CONAF Valparaíso) |
+| Interfaz | Despejar los alrededores de la vivienda (SENAPRED) |
+| Vegetación o interfaz | No hacer quemas (CONAF: restringidas en la región hasta el 31-05-2027); no botar colillas (SENAPRED) |
+| Interfaz con riesgo alto, historial o pendiente | Plan de barrio con zonas seguras y rutas de evacuación (MINVU); talleres Comunidad Preparada (CONAF) |
+| Calor o viento (mes o umbral DMC) | Faena Cero: nada de herramientas que hagan chispas, en especial de 12:00 a 18:00 (CONAF) |
+| Calor, aire seco o viento | Evitar fuentes de calor cerca de la vegetación, globos de los deseos y fuegos artificiales (CONAF/SENAPRED) |
+
+Condiciones del clima: relativas al mes (`calor`, `aire_seco`, `viento`, `sin_lluvia`: entre el 10 % más extremo) y
+absolutas con los umbrales de la Dirección Meteorológica de Chile (> 30 °C, < 30 % de humedad, > 30 km/h; los tres
+juntos = `condicion_30_30_30`). Con NASA POWER (~50 km, humedad mínima aproximada) son una referencia, no una medición
+local. Ejemplo: la víspera del incendio de 2024 (2-3 de febrero), Viña del Mar, Quilpué y Villa Alemana tenían calor,
+aire seco y viento entre el 10 % más extremo del mes, y más de 30 °C con humedad bajo 30 %; el viento de NASA POWER no
+pasó los 30 km/h, así que no se marca 30-30-30.
+
 ## 4. ¿Ordena bien la prioridad? (validación sin fuga)
 
 ¿Qué % de los días-sector con fuego cae en el 10 % de sectores de su comuna con mayor puntaje? Historial contado solo
