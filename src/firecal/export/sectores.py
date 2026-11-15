@@ -27,6 +27,11 @@ ARCHIVOS_SECTORES = {
     "recomendaciones": "recomendaciones.json",
 }
 NOMBRE_HORIZONTE = {24: "24 h", 48: "48 h", 168: "7 días"}
+# Debe describir el orden de firecal.sectores.recomendaciones.prioridad_alertas (validado en 12b_validar_sectores.py)
+NOTA_ALERTAS = ("Orden de prioridad: comunas con mayor riesgo y, dentro de ellas, sectores con más días con fuego "
+                "previos y, a igualdad, más casas junto a la vegetación (interfaz). En la prueba 2022-2025, el 10 % de "
+                "sectores mejor ordenados de cada comuna concentró el 29 % del fuego (azar 10 %). No es la "
+                "probabilidad de que ese sector se queme.")
 NOTA_HORIZONTE = {
     24: "Probabilidad de al menos un foco en la comuna mañana.",
     48: "Probabilidad de al menos un foco en la comuna mañana o pasado.",
@@ -137,9 +142,7 @@ def alertas_region(codigo_region: str, por_horizonte: dict[int, pd.DataFrame], c
     return {
         "contrato": VERSION_CONTRATO, "ejemplo": False, "calculado_utc": calculado_utc,
         "codigo_region": codigo_region,
-        "nota": "Orden de prioridad: comunas con mayor riesgo y, dentro de ellas, sectores con más factores de "
-                "exposición (interfaz, vegetación, pendiente, historial). No es la probabilidad de que ese sector se "
-                "queme.",
+        "nota": NOTA_ALERTAS,
         "horizontes": {str(h): [_item_alerta(s, codigo_region, condiciones) for _, s in d.iterrows()]
                        for h, d in por_horizonte.items()},
         "comunas": comunas,

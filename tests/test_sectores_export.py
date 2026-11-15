@@ -109,6 +109,13 @@ def test_recomendaciones_por_clima() -> None:
     assert todas[0] == "avisar_130" and len(todas) == len(set(todas)) and "entorno_vivienda" in todas
 
 
+def test_nota_de_alertas_describe_el_orden_validado() -> None:
+    from firecal.export.sectores import NOTA_ALERTAS
+
+    assert "días con fuego previos" in NOTA_ALERTAS and "interfaz" in NOTA_ALERTAS
+    assert "factores de exposición" not in NOTA_ALERTAS  # ese orden se descartó (no supera al azar en calibración)
+
+
 def test_catalogo_cubre_todos_los_codigos() -> None:
     from firecal.sectores.recomendaciones import FUENTES
 
