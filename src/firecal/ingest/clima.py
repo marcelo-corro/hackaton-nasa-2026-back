@@ -72,9 +72,10 @@ def _consultar(
     dormir: Callable[[float], None],
     desde: str = FECHA_DESDE,
     hasta: str = FECHA_HASTA,
+    variables: list[str] | None = None,
 ) -> dict:
     parametros = {
-        "parameters": ",".join(PARAMETROS_POWER),
+        "parameters": ",".join(variables or PARAMETROS_POWER),
         "community": "AG",
         "longitude": f"{lon:.4f}",
         "latitude": f"{lat:.4f}",
@@ -109,14 +110,16 @@ def descargar_clima(
     log: Callable[[str], None] = print,
     desde: str = FECHA_DESDE,
     hasta: str = FECHA_HASTA,
+    variables: list[str] | None = None,
 ) -> int:
     """Descarga las comunas que faltan en la caché, una consulta por comuna. Devuelve cuántas bajó.
-    `desde`/`hasta` (YYYY-MM-DD) permiten bajar otro período a otra caché (por ejemplo el año en curso)."""
+    `desde`/`hasta` (YYYY-MM-DD) permiten bajar otro período a otra caché (por ejemplo el año en curso) y
+    `variables`, otras variables de POWER (por defecto las del clima del modelo)."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     pendientes = puntos[~puntos["region_id"].map(lambda r: (cache_dir / f"{r}.json").exists())]
     descargadas = 0
     for fila in pendientes.itertuples():
-        datos = _consultar(fila.lat, fila.lon, get, reintentos, espera_s, dormir, desde, hasta)
+        datos = _consultar(fila.lat, fila.lon, get, reintentos, espera_s, dormir, desde, hasta, variables)
         guardar = {"lat": fila.lat, "lon": fila.lon, "parameter": datos["properties"]["parameter"]}
         (cache_dir / f"{fila.region_id}.json").write_text(json.dumps(guardar, separators=(",", ":")), encoding="utf-8")
         descargadas += 1

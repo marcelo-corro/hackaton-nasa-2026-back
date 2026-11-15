@@ -56,6 +56,12 @@ Desde el 15-11-2026 los datos llegan hasta ayer (MAP_KEY de FIRMS). Mostrar `man
 "Riesgo para el …" y `manifest.datos.nota` al lado (focos hasta ayer, satélite sustituto y clima con rezago). Quitar
 cualquier texto fijo que diga "1 de enero de 2026" o "último día con datos satelitales, no hoy".
 
+### Incendios activos y zona de avance (v0.7)
+`avance/activos.json`: incendios de Chile con focos en los 3 últimos días. En el mapa (País, Región o Comuna) un punto
+por incendio y, al elegirlo, dos círculos (`radio_km_70`, `radio_km_85`) y la flecha de viento solo si
+`mostrar_flecha`. Mostrar `nota`. Esto reemplaza el cono del modo visión, que era inventado: con estos datos la
+dirección se acierta poco y un cono mostraría una certeza que no existe.
+
 ### P3b · Sectores de la comuna (piloto Región de Valparaíso, contrato v0.3)
 Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el contrato, sección v0.3.
 - **Selector de horizonte:** 24 h (`riesgo/ultimo.json`), 48 h (`riesgo/48h.json`), 7 días (`riesgo/7d.json`). Si el

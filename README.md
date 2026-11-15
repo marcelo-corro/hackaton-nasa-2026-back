@@ -39,6 +39,8 @@ cp .env.example .env
 .venv/Scripts/python scripts/05_armonizar.py           # serie armonizada + docs/armonizacion.md
 .venv/Scripts/python scripts/05b_clima_diario.py       # clima NASA POWER por comuna (opcional; 345 consultas, retoma si se corta)
 .venv/Scripts/python scripts/05c_clima_reciente.py     # clima del año en curso (NASA POWER), se suma a clima_diario.parquet
+.venv/Scripts/python scripts/05d_viento_power.py       # dirección y velocidad del viento (NASA POWER) para la zona de avance
+.venv/Scripts/python scripts/14_validar_avance.py      # valida la dirección de avance + docs/avance_validacion.md
 .venv/Scripts/python scripts/06_eventos.py             # focos vs incendios + docs/eventos.md (opcional)
 .venv/Scripts/python scripts/07_calendario.py          # calendario con mediana, percentil y nivel
 .venv/Scripts/python scripts/08_riesgo.py              # modelo de riesgo + docs/riesgo.md (~1,5 min; usa el clima si existe)
@@ -49,6 +51,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/12d_validar_alertas.py    # simula la lista de alertas 2020-2025 + docs/alertas_validacion.md
 .venv/Scripts/python scripts/09_exportar.py            # archivos del contrato en public/
 .venv/Scripts/python scripts/13_exportar_sectores.py   # suma sectores, alertas y riesgo 48 h / 7 días a public/
+.venv/Scripts/python scripts/15_exportar_avance.py     # incendios activos con su zona de avance (avance/activos.json)
 .venv/Scripts/python scripts/10_publicar.py --sin-push # copia al repo de datos y hace commit; sin --sin-push, publica
 ```
 

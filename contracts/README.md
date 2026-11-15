@@ -1,8 +1,10 @@
-# Contrato back → front · versión 0.6
+# Contrato back → front · versión 0.7
 
 > Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
 
 **Cambios**
+- 0.7 (15-11-2026): **aditivo**. Nuevo `avance/activos.json` (en `manifest.archivos.avance`): incendios activos de
+  Chile con su zona probable de avance (círculos validados) y el viento. Detalle al final.
 - 0.6 (15-11-2026): **aditivo**. `manifest.json` suma `datos`: de qué fecha es cada fuente (los datos ya no terminan
   el 31-12-2025: llegan hasta ayer con la MAP_KEY de FIRMS). Detalle al final.
 - 0.5 (15-11-2026): **alertas por tipo**. La forma de los archivos no cambia (solo suma campos), pero la lista de
@@ -325,3 +327,27 @@ En cada elemento de `comunas[]`:
 - `nota`: texto listo para mostrar junto a la fecha ("de qué fecha son los datos"). Mostrarlo siempre.
 - `prueba_nueva`: cómo le fue al modelo en 2026, con datos que no existían cuando se eligió (para Metodología/pitch).
   Los valores del ejemplo son ilustrativos: usar los del archivo.
+
+---
+
+## v0.7 · Incendios activos y zona probable de avance (`avance/activos.json`)
+
+```json
+{"contrato": "0.7", "ultimo_dato": "2026-11-14", "nota": "Incendios con focos satelitales (VIIRS) en los 3 días ...",
+ "validacion": {"radios_km": {"p75": 2.53, "p90": 3.63}, "cobertura_prueba_pct": {"p75": 68.9, "p90": 85.4},
+                "viento_fuerte_desde_ms": 3.18, "acierto_45_viento_fuerte_prueba_pct": 35.7, "acierto_45_azar_pct": 25.0},
+ "incendios": [{"id": "05301-20261113-123", "region_id": "05705", "comuna": "Putaendo", "region": "Región de Valparaíso",
+                "lat": -32.6, "lon": -70.7, "inicio": "2026-11-13", "ultimo_foco": "2026-11-13",
+                "focos_ultimo_dia": 3, "focos_incendio": 3, "dias_con_focos": 1,
+                "radio_km_70": 2.53, "radio_km_85": 3.63,
+                "viento": {"fecha": "2026-11-12", "desde_grados": 217, "hacia_grados": 37, "velocidad_ms": 1.5, "fuerte": false},
+                "mostrar_flecha": false}]}
+```
+
+- Un ítem por incendio con focos (sin industria marcada) en los 3 días hasta `ultimo_dato`; `lat`/`lon` = centro de sus
+  focos más recientes. Valores del ejemplo ilustrativos.
+- Dibujar **dos círculos** centrados ahí: `radio_km_70` ("~70 % de los avances del día siguiente cae dentro") y
+  `radio_km_85` ("~85 %"). Son la zona probable de avance; **no dibujar un cono**.
+- Flecha hacia `viento.hacia_grados` (0 = norte, 90 = este) **solo si `mostrar_flecha` es `true`** (viento fuerte):
+  "el avance siguió el viento el 36 % de las veces (al azar, 25 %)". Con viento suave, sin flecha.
+- Mostrar `nota` cerca del mapa. Reemplaza el cono inventado del modo visión.

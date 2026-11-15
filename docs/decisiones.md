@@ -2,6 +2,17 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-15: zona probable de avance (no cono)
+
+- **Se midió si se puede anticipar hacia dónde avanza un incendio** (`14_validar_avance.py`, 6.674 avances día a día en
+  Chile 2012-2026, viento diario de NASA POWER). A ±45° (azar 25 %): viento a favor 29 % (calibración) y 31 % (prueba
+  2022-2026); con viento fuerte 34 % y 36 %; con viento suave, azar; persistencia (hacia donde avanzó ayer), azar; ni
+  el viento perfecto del día siguiente mejora. Un cono que contuviera la mitad de los avances abriría ±84°: **no se
+  publica cono**.
+- **Se publica la zona probable de avance:** círculos de 2,5 km (69 % de los avances del día siguiente en la prueba) y
+  3,6 km (85 %), con flecha de viento solo cuando es fuerte (desde 3,2 m/s). `avance/activos.json`, contrato 0.7.
+  Reemplaza el cono inventado del modo visión del front.
+
 ## 2026-11-15: datos de 2026 con la MAP_KEY (riesgo real para mañana)
 
 - **Focos 2026 por la API de FIRMS** (`01b_firms_reciente.py`) y **clima 2026 de NASA POWER** (`05c_clima_reciente.py`):

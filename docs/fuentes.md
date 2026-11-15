@@ -78,6 +78,10 @@ Se usa **en lugar de Open-Meteo** para las 345 comunas: el plan gratis de Open-M
 | Consultado | 2026-11-14 |
 | Licencia | Datos abiertos de la NASA; pide citar el origen (abajo) |
 
+**Viento para la zona de avance (paso 5d):** mismas consultas POWER con `WD10M` (dirección media diaria del viento a
+10 m, de dónde viene) y `WS10M` (velocidad media, m/s), 2012-01-01 a 2026-11-12, caché `data/raw/viento_power/`,
+salida `data/interim/viento_diario.parquet`.
+
 **Límites que hay que decir en la demo o el informe**
 - **`hrmin` es una aproximación.** POWER no entrega humedad mínima. Se estima como
   `100 · e(rocío medio) / e(temperatura máxima)` con la fórmula de Magnus. En una prueba (Viña del Mar) quedó
