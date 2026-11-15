@@ -2,6 +2,26 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-15: datos de 2026 con la MAP_KEY (riesgo real para mañana)
+
+- **Focos 2026 por la API de FIRMS** (`01b_firms_reciente.py`) y **clima 2026 de NASA POWER** (`05c_clima_reciente.py`):
+  el pipeline ya no termina el 31-12-2025, sino el último día con focos y clima.
+- **Suomi NPP no tiene datos desde el 2-nov-2026** (FIRMS: NRT hasta el 01-11). Para los días siguientes el modelo usa
+  **NOAA-20** (mismo instrumento VIIRS). Medido antes de decidir, en 2022-2025: con variables de NOAA-20 el modelo
+  rinde igual (AUC 0,845 vs 0,846; precisión media 0,282 en ambos); los conteos de 7 días tienen correlación 0,986 y
+  NOAA-20 ve ~5 % menos (`completar_con_noaa20`).
+- **`type` en NRT:** se infiere con los focos históricos no vegetales (< 0,3 km); probado a ciegas en 2025 (99,0 %
+  detectados, 1,0 % de falsos).
+- **Prueba nueva 2026:** enero a octubre de 2026 se evalúa aparte (datos que no existían al elegir el modelo).
+  Riesgo por comuna a 24 h: **AUC 0,873** (climatología 0,818), precisión media 0,328, captura top 10 % 59 %; muy alto
+  acertó el 48 %; alto o muy alto = 5,9 % de los días-comuna con el 48 % del fuego. Rinde igual o mejor que 2022-2025.
+- **Alertas en 2026 (honesto):** la lista anterior (v0.4, 25 sectores fijos) cubrió más fuego del día siguiente que
+  la v0.5 (11,6 % vs 8,2 %; comunas 33 % vs 25 %), aunque la v0.5 sigue siendo más eficiente por sector (0,5 % vs
+  0,2 % de los sectores listados con fuego) y marca menos (8,7 vs 25 por día). 2026 tiene poco fuego (146
+  sector-días): no se cambia la regla por esto, pero no se puede decir que la v0.5 cubra más fuego en todos los años.
+- **Riesgo publicado para hoy:** valido_para 15-11-2026 con focos hasta el 14-11 (NOAA-20 desde el 2-nov) y clima
+  hasta el 11-11 (último clima repetido 3 días; medido: AUC 0,846 → 0,824 con 3 días de rezago).
+
 ## 2026-11-15: alertas v0.5
 
 - **Alertas por tipo:** fuego activo (focos sin industria en los 3 días previos, sectores por cercanía al foco),

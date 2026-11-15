@@ -46,12 +46,13 @@ from firecal.contratos import validar_riesgo  # noqa: E402
 from firecal.model.evaluar import confiabilidad, curva_captura, metricas, por_segmento  # noqa: E402
 from firecal.model.variables import (  # noqa: E402
     VARIABLES_CLIMATOLOGIA, VARIABLES_MODELO_CLIMA, VARIABLES_MODELO_FIRMS, agregar_climatologia, bloque_clima,
-    tabla_base,
+    completar_con_noaa20, extender_clima, tabla_base,
 )
 from firecal.reportes import tabla_md  # noqa: E402
 
-INICIO, FIN = "2012-02-01", "2025-12-31"
-FIN_ENTRENAMIENTO, FIN_CALIBRACION = "2019-12-31", "2021-12-31"
+INICIO = "2012-02-01"  # el fin sale de los datos: último día con focos y con clima (ver main)
+FIN_ENTRENAMIENTO, FIN_CALIBRACION, FIN_PRUEBA = "2019-12-31", "2021-12-31", "2025-12-31"
+# Después de FIN_PRUEBA: "prueba nueva" (2026), datos que no existían al construir ni al elegir el modelo.
 NIVELES = [(0.30, "muy_alto"), (0.12, "alto"), (0.04, "medio"), (0.0, "bajo")]
 CASO = {"05109": "Viña del Mar", "05801": "Quilpué", "05804": "Villa Alemana"}
 CASO_VENTANA = ("2024-01-27", "2024-02-12")
@@ -178,19 +179,29 @@ def main() -> int:
     warnings.filterwarnings("ignore")
     focos = pd.read_parquet(config.INTERIM_DIR / "focos_calidad.parquet",
                             columns=["region_id", "fecha_local", "satelite", "uso_base", "frp"])
+    focos, ultimo_snpp = completar_con_noaa20(focos)
     comunas = gpd.read_parquet(config.INTERIM_DIR / "comunas.parquet")
     nombres = comunas.set_index("region_id")["nombre"]
+    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet")
+    fin = pd.Timestamp(focos["fecha_local"].max()).normalize()
+    clima_hasta, rezago_clima = None, 0
+    if clima is not None:
+        clima_hasta = pd.Timestamp(clima["fecha"].max())
+        clima, rezago_clima = extender_clima(clima, fin)  # NASA POWER llega con días de retraso
+    FIN = fin.strftime("%Y-%m-%d")  # noqa: N806
+    print(f"Último día con focos: {FIN} (Suomi NPP hasta {ultimo_snpp.date()}; después, NOAA-20 en su lugar); "
+          f"clima hasta {None if clima_hasta is None else clima_hasta.date()} (rezago {rezago_clima} días)")
 
     print("Armando tabla comuna x día...")
     tabla = tabla_base(focos, comunas, INICIO, FIN)
     ent = tabla["fecha"] <= FIN_ENTRENAMIENTO
     cal = (tabla["fecha"] > FIN_ENTRENAMIENTO) & (tabla["fecha"] <= FIN_CALIBRACION)
-    prueba = tabla["fecha"] > FIN_CALIBRACION
+    prueba = (tabla["fecha"] > FIN_CALIBRACION) & (tabla["fecha"] <= FIN_PRUEBA)
+    nuevo = tabla["fecha"] > FIN_PRUEBA
     tabla = agregar_climatologia(tabla, ent)
 
     variables = VARIABLES_MODELO_FIRMS + VARIABLES_CLIMATOLOGIA
     bloques = ["FIRMS"]
-    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet")
     if clima is not None:
         tabla = tabla.merge(clima, on=["region_id", "fecha"], how="left")
         bloques.append("clima")
@@ -297,7 +308,7 @@ def main() -> int:
     conf = confiabilidad(P["y24"], p_prueba)
 
     # Historia de predicciones (calibración + prueba) para percentiles y backtest
-    hist = tabla[(cal | prueba)].copy()
+    hist = tabla[(cal | prueba | nuevo)].copy()
     hist["prob"] = iso.predict(modelo.predict_proba(hist[cols])[:, 1])
     hist["valido_para"] = hist["fecha"] + pd.Timedelta(days=1)
     backtest = hist[["region_id", "fecha", "valido_para", "prob", "y24", "n_hoy", "vecinos_hoy"]].copy()
@@ -327,10 +338,39 @@ def main() -> int:
     validar_riesgo(riesgo)
     riesgo.to_parquet(config.PROCESSED_DIR / "riesgo.parquet", index=False)
 
+    # Prueba nueva: días posteriores a FIN_PRUEBA (2026), que no existían al construir ni al elegir el modelo.
+    # Solo días cuyo objetivo es de Suomi NPP (antes de que empiece la sustitución por NOAA-20).
+    N = tabla[nuevo & tabla["y24"].notna() & (tabla["fecha"] < ultimo_snpp)]
+    prueba_nueva = None
+    if len(N) and N["y24"].sum() > 0:
+        pn = iso.predict(modelo.predict_proba(N[cols])[:, 1])
+        rn, cn = metricas(N["y24"], pn), metricas(N["y24"], N["clim_comuna_mes"])
+        yn = N["y24"].to_numpy()
+        niv = nivel(pn)
+        muy = niv == "muy_alto"
+        alto_o_mas = np.isin(niv, ["alto", "muy_alto"])
+        prueba_nueva = {
+            "desde": (N["fecha"].min() + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+            "hasta": (N["fecha"].max() + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+            "dias_comuna": int(len(N)), "dias_con_fuego": int(yn.sum()),
+            "modelo": {k: round(rn[k], 4) for k in ("auc", "precision_media", "captura_top10", "tasa_base")},
+            "climatologia": {k: round(cn[k], 4) for k in ("auc", "precision_media", "captura_top10")},
+            "muy_alto_acierta_pct": round(100 * yn[muy].mean(), 1) if muy.any() else None,
+            "alto_o_mas_pct_dias": round(100 * alto_o_mas.mean(), 1),
+            "alto_o_mas_captura_pct": round(100 * yn[alto_o_mas].sum() / yn.sum(), 1),
+        }
+        print(f"Prueba nueva {prueba_nueva['desde']} a {prueba_nueva['hasta']}: AUC {rn['auc']:.3f} (climatología "
+              f"{cn['auc']:.3f}), precisión media {rn['precision_media']:.3f}, captura top 10 % "
+              f"{100 * rn['captura_top10']:.0f} %")
+
     # Detalle por horizonte (lo usa 13_exportar_sectores.py para riesgo/48h.json y riesgo/7d.json)
     clim24 = resultados["Climatología (comuna × mes)"]
     claves = ["auc", "precision_media", "captura_top10", "tasa_base"]
-    info_h = {"modelo": nombre_modelo, "periodo_prueba": "2022-2025", "horizontes": {}}
+    info_h = {"modelo": nombre_modelo, "periodo_prueba": "2022-2025", "horizontes": {},
+              "ultimo_dato": FIN, "ultimo_dato_suomi_npp": ultimo_snpp.strftime("%Y-%m-%d"),
+              "sustitucion_noaa20": bool(fin > ultimo_snpp),
+              "clima_hasta": None if clima_hasta is None else clima_hasta.strftime("%Y-%m-%d"),
+              "clima_rezago_dias": int(rezago_clima), "prueba_nueva": prueba_nueva}
     for obj, (horas, dias) in HORIZONTES.items():
         mp = resultados[elegido] if obj == "y24" else otros[obj]["modelo_prueba"]
         cp = clim24 if obj == "y24" else otros[obj]["clim_prueba"]
@@ -408,6 +448,10 @@ def main() -> int:
         f"{resultados['Persistencia + climatología']['auc']:.3f}). La regresión logística rinde casi igual "
         f"(AUC {lr_auc:.3f}): la ganancia viene de las variables, no de la complejidad del modelo. Se usa gradient "
         "boosting porque admite nuevos bloques (clima, vegetación) sin rediseñar.",
+        *([f"- **Prueba nueva 2026** ({prueba_nueva['desde']} a {prueba_nueva['hasta']}, datos que no existían al "
+            f"elegir el modelo): AUC **{prueba_nueva['modelo']['auc']:.3f}** (climatología "
+            f"{prueba_nueva['climatologia']['auc']:.3f}), precisión media {prueba_nueva['modelo']['precision_media']:.3f}."]
+          if prueba_nueva else []),
         f"- **Horizontes:** en precisión media, el modelo supera a la climatología de su horizonte ×{ventaja['y24']:.2f} "
         f"a 24 h, ×{ventaja['y48']:.2f} a 48 h y ×{ventaja['y7d']:.2f} a 7 días"
         + (": la vista semanal es sobre todo estacional (orientativa)." if ventaja["y7d"] < 1.2 else "."),
@@ -464,6 +508,30 @@ def main() -> int:
         "\"alto\").",
         "",
         tabla_md(tabla_umbrales, 1),
+        "",
+        "## 3b. Prueba nueva: 2026",
+        *(["Días que no existían cuando se construyó y eligió el modelo (bajados con la MAP_KEY de FIRMS). Objetivo y "
+           "variables de Suomi NPP; no se usaron para ajustar nada.", "",
+           tabla_md(pd.DataFrame({"Modelo": prueba_nueva["modelo"],
+                                  "Climatología": prueba_nueva["climatologia"]}).T.rename(columns=NOMBRES_METRICAS), 3),
+           "",
+           f"Período {prueba_nueva['desde']} a {prueba_nueva['hasta']} "
+           f"({prueba_nueva['dias_comuna']:,}".replace(",", ".") + " días-comuna, "
+           + f"{prueba_nueva['dias_con_fuego']:,}".replace(",", ".") + " con fuego). "
+           + f"Nivel muy alto: acertó el {prueba_nueva['muy_alto_acierta_pct']} % de las veces. Alto o muy alto: "
+           f"{prueba_nueva['alto_o_mas_pct_dias']} % de los días-comuna con el {prueba_nueva['alto_o_mas_captura_pct']} % "
+           "del fuego."]
+          if prueba_nueva else ["Sin datos posteriores a 2025."]),
+        "",
+        f"Suomi NPP tiene datos hasta el {ultimo_snpp.date()}; "
+        + (f"del {(ultimo_snpp + pd.Timedelta(days=1)).date()} al {FIN} el modelo usa NOAA-20 en su lugar (mismo "
+           "instrumento VIIRS; en 2022-2025, con variables de NOAA-20 el modelo rinde igual: AUC 0,845 vs 0,846)."
+           if fin > ultimo_snpp else "no hizo falta sustituirlo."),
+        "",
+        (f"El clima de NASA POWER llega hasta el {clima_hasta.date()}: para los {rezago_clima} días siguientes se usa "
+         "el último clima disponible. Medido en 2022-2025, con 3 días de rezago el modelo baja de AUC 0,846 a 0,824 y "
+         "de precisión media 0,282 a 0,251 (la climatología sola: 0,789 y 0,150)."
+         if rezago_clima else "El clima está al día con los focos."),
         "",
         "## 4. Calibración (prueba 2022-2025)",
         "Si la probabilidad está bien calibrada, lo predicho y lo observado coinciden en cada decil.",

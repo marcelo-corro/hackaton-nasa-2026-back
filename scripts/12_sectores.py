@@ -28,6 +28,7 @@ from firecal import config  # noqa: E402
 from firecal.sectores.capas import (  # noqa: E402
     CLASES_WORLDCOVER, CLASES_WUI, MAX_SIN_DATO_WUI, resumen_categorico, resumen_pendiente,
 )
+from firecal.model.variables import completar_con_noaa20  # noqa: E402
 from firecal.sectores.caminos import distancia_urbano, leer_caminos, variables_caminos  # noqa: E402
 from firecal.sectores.grilla import grilla_sectores  # noqa: E402
 from firecal.sectores.historial import (  # noqa: E402
@@ -51,6 +52,8 @@ def main() -> int:
     focos = pd.read_parquet(config.INTERIM_DIR / "focos_calidad.parquet",
                             columns=["lat", "lon", "fecha_local", "satelite", "uso_base", "frp", "region_id",
                                      "dia_noche"])
+    focos, ultimo_snpp = completar_con_noaa20(focos)  # sin Suomi NPP, NOAA-20 en su lugar (ver firecal.model)
+    print(f"Suomi NPP hasta {ultimo_snpp.date()}; focos hasta {focos['fecha_local'].max().date()}")
     focos_sector = asignar_sector(focos_con_evento(focos), sectores)
     persistentes = fuentes_persistentes(focos_sector)
     es_persistente = focos_sector["sector_id"].isin(set(persistentes["sector_id"]))

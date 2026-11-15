@@ -42,6 +42,18 @@ CASO_FECHA = "2024-02-04"  # incendio de Viña del Mar, Quilpué y Villa Alemana
 INICIO_DATOS = pd.Timestamp("2012-02-01")  # primer día con VIIRS Suomi NPP en la serie
 
 
+def nota_datos(info: dict) -> str:
+    """Texto corto sobre la frescura de los datos (focos, satélite sustituto y clima con rezago)."""
+    partes = [f"Focos satelitales hasta el {info.get('ultimo_dato')}."]
+    if info.get("sustitucion_noaa20"):
+        partes.append(f"Suomi NPP no tiene datos desde el {info.get('ultimo_dato_suomi_npp')}: los días siguientes usan "
+                      "NOAA-20 (mismo instrumento; en 2022-2025 el modelo rindió igual con él).")
+    if info.get("clima_rezago_dias"):
+        partes.append(f"El clima (NASA POWER) llega hasta el {info.get('clima_hasta')}: se usa ese último clima "
+                      "(con 3 días de rezago el modelo baja de AUC 0,85 a 0,82).")
+    return " ".join(partes)
+
+
 def _json(ruta: Path, datos: dict) -> None:
     ruta.parent.mkdir(parents=True, exist_ok=True)
     ruta.write_text(json.dumps(datos, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
@@ -84,7 +96,8 @@ def main() -> int:
 
     # Clima observado del último día por comuna (condiciones y recomendaciones por clima)
     ultimo = riesgo[riesgo["valido_para"] == riesgo["valido_para"].max()]
-    fecha_clima = pd.Timestamp(ultimo["valido_para"].max()) - pd.Timedelta(days=1)
+    fecha_dato = pd.Timestamp(ultimo["valido_para"].max()) - pd.Timedelta(days=1)  # último día con focos
+    fecha_clima = min(fecha_dato, pd.Timestamp(clima["fecha"].max())) if clima is not None else fecha_dato
     clima_region = clima[clima["region_id"].isin(codigos)] if clima is not None else None
     cond = condiciones_clima(clima_region, fecha_clima) if clima_region is not None else pd.DataFrame()
     cond_map = dict(zip(cond["region_id"], cond["condiciones"])) if len(cond) else {}
@@ -117,13 +130,13 @@ def main() -> int:
         return lst.merge(s_v[cols_item], on="sector_id", how="left").sort_values("orden") if len(lst) else lst
 
     por_horizonte = {h: lista_dia(ultimo[ultimo["horizonte_horas"] == h][["region_id", "prob_foco", "nivel"]],
-                                  fecha_clima, s_v["dias_con_fuego"].to_numpy()) for h in (24, 48, 168)}
+                                  fecha_dato, s_v["dias_con_fuego"].to_numpy()) for h in (24, 48, 168)}
     comunas = resumen_comunas(riesgo, cond, nombres, codigos, args.region)
     textos_cond = {k: v["texto"] for k, v in CONDICIONES.items()}
     mes_obj = pd.Timestamp(ultimo["valido_para"].max()).month
     for c in comunas:
         dias_c = dia_foco[focos["region_id"].astype(str) == c["region_id"]]
-        c.update(motivos_comuna(dias_c, fecha_clima, mes_obj, cond_map.get(c["region_id"], []), textos_cond,
+        c.update(motivos_comuna(dias_c, fecha_dato, mes_obj, cond_map.get(c["region_id"], []), textos_cond,
                                 INICIO_DATOS))
 
     # Caso histórico con las mismas reglas: lista de la víspera (24 h) y qué pasó ese día
@@ -177,6 +190,17 @@ def main() -> int:
     m["contrato"] = VERSION_CONTRATO
     m["archivos"].update(ARCHIVOS_SECTORES)
     m["sectores"] = {"codigo_region": args.region, "regiones": codigos}
+    pn = info.get("prueba_nueva")
+    m["datos"] = {  # v0.6: de qué fecha es cada fuente, para mostrarlo en el front
+        "valido_para": pd.Timestamp(ultimo["valido_para"].max()).strftime("%Y-%m-%d"),
+        "ultimo_dato_focos": info.get("ultimo_dato"), "ultimo_dato_suomi_npp": info.get("ultimo_dato_suomi_npp"),
+        "sustitucion_noaa20": info.get("sustitucion_noaa20", False),
+        "clima_hasta": info.get("clima_hasta"), "clima_rezago_dias": info.get("clima_rezago_dias", 0),
+        "prueba_nueva": None if not pn else {"desde": pn["desde"], "hasta": pn["hasta"], "auc": pn["modelo"]["auc"],
+                                             "auc_climatologia": pn["climatologia"]["auc"],
+                                             "precision_media": pn["modelo"]["precision_media"]},
+        "nota": nota_datos(info),
+    }
     if modelo_b:
         cal, pru = modelo_b["calibracion"], modelo_b.get("prueba", {})
         orden_a = "Orden A+ (historial, luego interfaz)"

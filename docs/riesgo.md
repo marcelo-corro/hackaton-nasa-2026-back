@@ -1,12 +1,13 @@
 # Riesgo de focos por comuna a 24 h, 48 h y 7 días
-_Generado por `scripts/08_riesgo.py` el 2026-11-15 00:11 UTC. No editar a mano: se regenera._
+_Generado por `scripts/08_riesgo.py` el 2026-11-15 05:30 UTC. No editar a mano: se regenera._
 
 ## Resumen
-- **Pregunta:** ¿habrá al menos un foco VIIRS (Suomi NPP) en la comuna mañana? Unidad: comuna × día (1 753 635 filas). Tasa base en prueba: 3.6 %.
+- **Pregunta:** ¿habrá al menos un foco VIIRS (Suomi NPP) en la comuna mañana? Unidad: comuna × día (1 863 345 filas). Tasa base en prueba: 3.6 %.
 - **Bloques de variables usados:** FIRMS, clima. Modelo elegido: **Gradient boosting (FIRMS + clima)** (`hgb_firms_clima_v3`), por precisión media en el período de calibración.
-- **Prueba 2022-2025 (nunca vista al entrenar):** AUC **0.846**, precisión media **0.282** (la tasa base es 0.036), el 10 % de días-comuna de mayor riesgo captura el **52 %** de los días con fuego (lift ×5.2).
+- **Prueba 2022-2025 (nunca vista al entrenar):** AUC **0.845**, precisión media **0.282** (la tasa base es 0.036), el 10 % de días-comuna de mayor riesgo captura el **52 %** de los días con fuego (lift ×5.2).
 - **Supera a las líneas base** (climatología AUC 0.789, persistencia 0.811). La regresión logística rinde casi igual (AUC 0.831): la ganancia viene de las variables, no de la complejidad del modelo. Se usa gradient boosting porque admite nuevos bloques (clima, vegetación) sin rediseñar.
-- **Horizontes:** en precisión media, el modelo supera a la climatología de su horizonte ×1.88 a 24 h, ×1.43 a 48 h y ×1.10 a 7 días: la vista semanal es sobre todo estacional (orientativa).
+- **Prueba nueva 2026** (2026-01-02 a 2026-11-01, datos que no existían al elegir el modelo): AUC **0.873** (climatología 0.818), precisión media 0.328.
+- **Horizontes:** en precisión media, el modelo supera a la climatología de su horizonte ×1.87 a 24 h, ×1.43 a 48 h y ×1.10 a 7 días: la vista semanal es sobre todo estacional (orientativa).
 - **Límite honesto:** sus alertas (nivel alto o muy alto) **sirven para priorizar, no para anticipar todo**. En comunas **con fuego reciente** acertaron el **31 %** de las veces (tasa base 16 %) y cubrieron el 79 % de los días con fuego. En comunas **sin fuego reciente** acertaron el **15 %** (6 veces la tasa base de 2.4 %), pero el **82 %** de los incendios nuevos empezó sin alerta. La mayoría de las igniciones son humanas.
 - **Caso Viña del Mar:** la víspera del 3 de febrero de 2024, con el fuego todavía en comunas vecinas, el modelo subió el riesgo de Viña de 1.5 % a **2.9 %** (nivel `bajo`), pero no lo marcó como alto. Ni siquiera con el clima de ese día (calor, baja humedad y viento) anticipa el salto de un incendio a otra comuna: el clima eleva el riesgo de toda la zona, no dice hacia dónde avanza el fuego.
 
@@ -17,11 +18,11 @@ Entrenamiento 2012-02 a 2019-12; calibración de probabilidades (isotónica) 202
 
 | Modelo (prueba 2022-2025, 24 h) | AUC | Precisión media | Captura top 10 % | Lift top 10 % | Brier | Tasa base |
 |---|---|---|---|---|---|---|
-| Climatología (comuna × mes) | 0.789 | 0.150 | 0.403 | 4.025 | 0.033 | 0.036 |
-| Persistencia + climatología | 0.811 | 0.204 | 0.444 | 4.435 | — | 0.036 |
-| Regresión logística (FIRMS) | 0.831 | 0.258 | 0.495 | 4.945 | 0.030 | 0.036 |
+| Climatología (comuna × mes) | 0.789 | 0.150 | 0.402 | 4.025 | 0.033 | 0.036 |
+| Persistencia + climatología | 0.811 | 0.204 | 0.443 | 4.433 | — | 0.036 |
+| Regresión logística (FIRMS) | 0.831 | 0.258 | 0.494 | 4.943 | 0.030 | 0.036 |
 | Gradient boosting (FIRMS) | 0.833 | 0.264 | 0.501 | 5.006 | 0.030 | 0.036 |
-| Gradient boosting (FIRMS + clima) | 0.846 | 0.282 | 0.520 | 5.200 | 0.030 | 0.036 |
+| Gradient boosting (FIRMS + clima) | 0.845 | 0.282 | 0.520 | 5.198 | 0.030 | 0.036 |
 
 ## 2. Ignición vs. propagación (prueba 2022-2025)
 
@@ -38,20 +39,20 @@ Alertas del modelo elegido (nivel alto o muy alto, probabilidad ≥ 12 %):
 
 | Segmento | Días-comuna | Alertas (alto o muy alto) | % de alertas con fuego | % del fuego que tuvo alerta | Tasa base (%) |
 |---|---|---|---|---|---|
-| propagación | 43 045 | 18 056 | 30.8 | 78.8 | 16.4 |
-| ignición | 460 655 | 13 167 | 15.3 | 18.4 | 2.4 |
+| propagación | 43 100 | 18 078 | 30.8 | 78.8 | 16.4 |
+| ignición | 460 945 | 13 174 | 15.3 | 18.4 | 2.4 |
 
 ## 3. Horizontes de 48 h y 7 días
 Mismas variables que a 24 h. Cada modelo se compara con la climatología de su propio horizonte (frecuencia histórica, en la comuna y el mes, de tener al menos un foco en esos días). La precisión media sube con el horizonte solo porque hay más casos positivos: lo que importa es cuánto supera a la climatología.
 
 |  | AUC | Precisión media | Captura top 10 % | Lift top 10 % | Brier | Tasa base |
 |---|---|---|---|---|---|---|
-| Gradient boosting 48 h | 0.831 | 0.323 | 0.454 | 4.536 | 0.049 | 0.062 |
-| Climatología 48 h | 0.786 | 0.226 | 0.375 | 3.747 | 0.054 | 0.062 |
-| Gradient boosting 7 días | 0.817 | 0.490 | 0.345 | 3.446 | 0.108 | 0.163 |
-| Climatología 7 días | 0.791 | 0.444 | 0.316 | 3.163 | 0.114 | 0.163 |
+| Gradient boosting 48 h | 0.830 | 0.323 | 0.453 | 4.530 | 0.050 | 0.062 |
+| Climatología 48 h | 0.786 | 0.226 | 0.374 | 3.742 | 0.054 | 0.062 |
+| Gradient boosting 7 días | 0.816 | 0.490 | 0.344 | 3.440 | 0.109 | 0.163 |
+| Climatología 7 días | 0.790 | 0.444 | 0.315 | 3.154 | 0.115 | 0.163 |
 
-Ventaja sobre la climatología en precisión media: 24 h ×1.88, 48 h ×1.43, 7 días ×1.10. **A 7 días el modelo aporta poco sobre el calendario:** usa el clima observado del último día, que dice poco de la semana siguiente. La vista semanal debe rotularse como orientativa (estacional); para mejorarla haría falta un pronóstico del tiempo.
+Ventaja sobre la climatología en precisión media: 24 h ×1.87, 48 h ×1.43, 7 días ×1.10. **A 7 días el modelo aporta poco sobre el calendario:** usa el clima observado del último día, que dice poco de la semana siguiente. La vista semanal debe rotularse como orientativa (estacional); para mejorarla haría falta un pronóstico del tiempo.
 
 Umbrales de nivel por horizonte. A 48 h y 7 días se fijan para que, en calibración 2020-2021, cada nivel agrupe la misma proporción de días-comuna que a 24 h (con los umbrales de 24 h, a 7 días casi todo saldría "alto").
 
@@ -61,41 +62,55 @@ Umbrales de nivel por horizonte. A 48 h y 7 días se fijan para que, en calibrac
 | 48 h | 45.2 | 21.8 | 7.9 |
 | 7 días | 79.1 | 52.3 | 22.8 |
 
+## 3b. Prueba nueva: 2026
+Días que no existían cuando se construyó y eligió el modelo (bajados con la MAP_KEY de FIRMS). Objetivo y variables de Suomi NPP; no se usaron para ajustar nada.
+
+|  | AUC | Precisión media | Captura top 10 % | Tasa base |
+|---|---|---|---|---|
+| Modelo | 0.873 | 0.328 | 0.587 | 0.035 |
+| Climatología | 0.818 | 0.176 | 0.476 | — |
+
+Período 2026-01-02 a 2026-11-01 (104.880 días-comuna, 3.664 con fuego). Nivel muy alto: acertó el 47.8 % de las veces. Alto o muy alto: 5.9 % de los días-comuna con el 48.1 % del fuego.
+
+Suomi NPP tiene datos hasta el 2026-11-01; del 2026-11-02 al 2026-11-14 el modelo usa NOAA-20 en su lugar (mismo instrumento VIIRS; en 2022-2025, con variables de NOAA-20 el modelo rinde igual: AUC 0,845 vs 0,846).
+
+El clima de NASA POWER llega hasta el 2026-11-11: para los 3 días siguientes se usa el último clima disponible. Medido en 2022-2025, con 3 días de rezago el modelo baja de AUC 0,846 a 0,824 y de precisión media 0,282 a 0,251 (la climatología sola: 0,789 y 0,150).
+
 ## 4. Calibración (prueba 2022-2025)
 Si la probabilidad está bien calibrada, lo predicho y lo observado coinciden en cada decil.
 
 |  | predicho | observado | n |
 |---|---|---|---|
-| decil 1 | 0.000 | 0.000 | 50 370 |
-| decil 2 | 0.001 | 0.001 | 50 370 |
-| decil 3 | 0.005 | 0.004 | 50 370 |
-| decil 4 | 0.008 | 0.008 | 50 370 |
-| decil 5 | 0.013 | 0.013 | 50 370 |
-| decil 6 | 0.021 | 0.021 | 50 370 |
-| decil 7 | 0.028 | 0.028 | 50 370 |
-| decil 8 | 0.040 | 0.038 | 50 370 |
-| decil 9 | 0.066 | 0.060 | 50 370 |
-| decil 10 | 0.215 | 0.184 | 50 370 |
+| decil 1 | 0.000 | 0.000 | 50 405 |
+| decil 2 | 0.001 | 0.001 | 50 404 |
+| decil 3 | 0.005 | 0.005 | 50 405 |
+| decil 4 | 0.008 | 0.008 | 50 404 |
+| decil 5 | 0.013 | 0.013 | 50 405 |
+| decil 6 | 0.021 | 0.021 | 50 404 |
+| decil 7 | 0.028 | 0.028 | 50 404 |
+| decil 8 | 0.040 | 0.038 | 50 405 |
+| decil 9 | 0.066 | 0.060 | 50 404 |
+| decil 10 | 0.215 | 0.184 | 50 405 |
 
 ## 5. Qué variables pesan
 Caída de la precisión media al desordenar cada variable (muestra de la prueba).
 
 | Variable | Caída de precisión media |
 |---|---|
-| frp_hoy | 0.0485 |
-| dias_desde_ultimo | 0.0381 |
-| precip | 0.0342 |
-| clim_comuna_mes | 0.0332 |
-| n_7d | 0.0240 |
-| hrmin | 0.0231 |
-| lat | 0.0220 |
-| n_30d | 0.0176 |
-| clim_comuna | 0.0169 |
+| frp_hoy | 0.0512 |
+| dias_desde_ultimo | 0.0416 |
+| clim_comuna_mes | 0.0324 |
+| precip | 0.0294 |
+| n_7d | 0.0257 |
+| hrmin | 0.0224 |
+| lat | 0.0222 |
+| n_30d | 0.0194 |
+| clim_comuna | 0.0172 |
 | tmax | 0.0141 |
-| lon | 0.0069 |
-| viento_max | 0.0065 |
-| precip_7d | 0.0047 |
-| mes | 0.0034 |
+| viento_max | 0.0082 |
+| lon | 0.0061 |
+| mes | 0.0043 |
+| precip_7d | 0.0034 |
 
 ## 6. Caso Viña del Mar, febrero de 2024
 
@@ -122,6 +137,6 @@ Caída de la precisión media al desordenar cada variable (muestra de la prueba)
 ## 7. Niveles y salidas
 - Niveles por probabilidad a 24 h: `bajo` < 4 % (≈ tasa base) ≤ `medio` < 12 % ≤ `alto` < 30 % ≤ `muy_alto`. A 48 h y 7 días, los umbrales de la sección 3.
 - `percentil`: posición de la probabilidad contra las del mismo comuna y mes en 2020-2025.
-- `data/processed/riesgo.parquet`: riesgo desde el día siguiente al último dato (2025-12-31) a 24 h, 48 h y 7 días, con el contrato `riesgo`. Para un riesgo de verdad para mañana hacen falta los focos de 2026 (FIRMS casi en tiempo real, MAP_KEY).
+- `data/processed/riesgo.parquet`: riesgo desde el día siguiente al último dato (2026-11-14) a 24 h, 48 h y 7 días, con el contrato `riesgo`. Para un riesgo de verdad para mañana hacen falta los focos de 2026 (FIRMS casi en tiempo real, MAP_KEY).
 - `data/processed/riesgo_backtest.parquet`: predicciones de 2020-2025 con lo que pasó, para revisar casos.
 - Para sumar variables (clima, vegetación) basta crear el bloque con llave comuna × día: el script lo detecta y agrega la fila a la comparación.

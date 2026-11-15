@@ -39,7 +39,13 @@ from firecal.sectores.modelo_b import (  # noqa: E402
 )
 
 FIN_ENT, FIN_CAL = pd.Timestamp("2019-12-31"), pd.Timestamp("2021-12-31")
-FIN_DATOS = pd.Timestamp("2025-12-31")  # último día con datos: se predice el siguiente (como 08_riesgo.py)
+FIN_PRUEBA = pd.Timestamp("2025-12-31")  # la prueba del modelo B queda en 2022-2025 (comparable con lo publicado)
+
+
+def ultimo_dato() -> pd.Timestamp:
+    """Último día con datos, el mismo que usó 08_riesgo.py (se predice el día siguiente)."""
+    ruta = config.PROCESSED_DIR / "riesgo_horizontes.json"
+    return pd.Timestamp(json.loads(ruta.read_text(encoding="utf-8")).get("ultimo_dato", "2025-12-31"))
 SEMILLAS = (42, 7, 123)
 
 
@@ -80,7 +86,8 @@ def main() -> int:
     print(f"Tabla: {len(t):,} filas, {int(t['y'].sum()):,} sector-días con fuego, "
           f"{t.groupby(['region_id', 'dia']).ngroups:,} comuna-días ({time.time() - t0:.0f} s)")
 
-    E, C, P = t[t["fecha"] <= FIN_ENT], t[(t["fecha"] > FIN_ENT) & (t["fecha"] <= FIN_CAL)], t[t["fecha"] > FIN_CAL]
+    E, C = t[t["fecha"] <= FIN_ENT], t[(t["fecha"] > FIN_ENT) & (t["fecha"] <= FIN_CAL)]
+    P = t[(t["fecha"] > FIN_CAL) & (t["fecha"] <= FIN_PRUEBA)]
     modelos, p_cal, p_pru = [], [], []
     for seed in SEMILLAS:
         m = hgb(seed).fit(E[VARIABLES_B], E["y"])
@@ -119,7 +126,7 @@ def main() -> int:
     q = t[t["y"] == 1].copy()
     q["grande"] = etiqueta_grande(q, f)
     qE, qC, qP = (q[q["fecha"] <= FIN_ENT], q[(q["fecha"] > FIN_ENT) & (q["fecha"] <= FIN_CAL)],
-                  q[q["fecha"] > FIN_CAL])
+                  q[(q["fecha"] > FIN_CAL) & (q["fecha"] <= FIN_PRUEBA)])
     modelos_g = [HistGradientBoostingClassifier(max_iter=200, learning_rate=0.05, max_leaf_nodes=15,
                                                 min_samples_leaf=40, early_stopping=True, random_state=sd)
                  .fit(qE[VARIABLES_B], qE["grande"]) for sd in SEMILLAS]
@@ -139,6 +146,7 @@ def main() -> int:
     prom_b = lambda d: np.mean([m.predict_proba(d[VARIABLES_B])[:, 1] for m in modelos], axis=0)  # noqa: E731
     iso_b = IsotonicRegression(out_of_bounds="clip", y_min=0, y_max=0.95).fit(prom_b(C), C["y"])
     iso_g = IsotonicRegression(out_of_bounds="clip", y_min=0, y_max=0.95).fit(prom_g(qC), qC["grande"])
+    FIN_DATOS = ultimo_dato()  # noqa: N806
     dia_pred = int(dia_entero(pd.Series([FIN_DATOS + pd.Timedelta(days=1)]))[0])
     tp = tabla_condicional(s, f, xy_f, xy_s, pares=[(rid, dia_pred) for rid in sorted(s["region_id"].unique())])
     salida = pd.DataFrame({

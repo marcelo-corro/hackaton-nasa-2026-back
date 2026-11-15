@@ -63,6 +63,33 @@ def test_objetivo_7_dias() -> None:
     assert t[("13101", pd.Timestamp("2020-01-02"))] == 0.0
 
 
+def test_completar_con_noaa20_solo_despues_del_ultimo_snpp() -> None:
+    from firecal.model.variables import completar_con_noaa20
+
+    f = pd.DataFrame({"satelite": ["SNPP", "NOAA20", "NOAA20", "NOAA20"],
+                      "fecha_local": pd.to_datetime(["2026-11-01", "2026-10-31", "2026-11-02", "2026-11-14"]),
+                      "uso_base": True, "frp": 1.0, "region_id": "05101"})
+    out, ultimo = completar_con_noaa20(f)
+    assert ultimo == pd.Timestamp("2026-11-01")
+    sust = out[out["sustituto_noaa20"]]
+    assert list(sust["fecha_local"].dt.day) == [2, 14] and (sust["satelite"] == "SNPP").all()
+    assert len(out) == 6  # las filas NOAA-20 originales se conservan
+    sin, _ = completar_con_noaa20(f[f["fecha_local"] <= "2026-11-01"])
+    assert not sin["sustituto_noaa20"].any()
+
+
+def test_extender_clima_repite_el_ultimo_dia() -> None:
+    from firecal.model.variables import extender_clima
+
+    c = pd.DataFrame({"region_id": ["A", "A", "B", "B"], "fecha": pd.to_datetime(["2026-11-10", "2026-11-11"] * 2),
+                      "tmax": [20.0, 25.0, 30.0, 31.0]})
+    out, n = extender_clima(c, pd.Timestamp("2026-11-14"))
+    assert n == 3 and len(out) == 4 + 3 * 2
+    assert out[(out["region_id"] == "A") & (out["fecha"] == "2026-11-14")]["tmax"].iat[0] == 25.0
+    igual, cero = extender_clima(c, pd.Timestamp("2026-11-11"))
+    assert cero == 0 and len(igual) == 4
+
+
 def test_validar_riesgo_acepta_varios_horizontes() -> None:
     import pytest
 

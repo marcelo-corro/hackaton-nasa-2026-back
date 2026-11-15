@@ -1,8 +1,10 @@
-# Contrato back → front · versión 0.5
+# Contrato back → front · versión 0.6
 
 > Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
 
 **Cambios**
+- 0.6 (15-11-2026): **aditivo**. `manifest.json` suma `datos`: de qué fecha es cada fuente (los datos ya no terminan
+  el 31-12-2025: llegan hasta ayer con la MAP_KEY de FIRMS). Detalle al final.
 - 0.5 (15-11-2026): **alertas por tipo**. La forma de los archivos no cambia (solo suma campos), pero la lista de
   `alertas/{codigo_region}.json` ahora puede venir **vacía** o con otro largo que 25. Suma `tipo`, `motivo_orden` y
   `dist_foco_reciente_km` por ítem, `listas` y `validacion` por archivo, y `fuego_activo`, `motivos` y datos de
@@ -306,3 +308,20 @@ En cada elemento de `comunas[]`:
 | `dias_con_fuego_7d`, `ultimo_fuego` | Días con focos en la última semana y fecha del último |
 | `pct_dias_con_fuego_mes` | % de los días de ese mes (2012-2025) con focos en la comuna |
 | `motivos` | Lista de textos listos para mostrar: fuego activo o reciente, clima del último día y temporada. Son hechos verificables que acompañan el nivel, no el peso de cada variable en el modelo |
+
+---
+
+## v0.6 · Frescura de los datos (`manifest.datos`)
+
+```json
+"datos": {"valido_para": "2026-11-15", "ultimo_dato_focos": "2026-11-14", "ultimo_dato_suomi_npp": "2026-11-01",
+          "sustitucion_noaa20": true, "clima_hasta": "2026-11-11", "clima_rezago_dias": 3,
+          "prueba_nueva": {"desde": "2026-01-02", "hasta": "2026-11-01", "auc": 0.83, "auc_climatologia": 0.79,
+                           "precision_media": 0.25},
+          "nota": "Focos satelitales hasta el 2026-11-14. Suomi NPP no tiene datos desde ... El clima (NASA POWER) ..."}
+```
+
+- `valido_para`: el día del riesgo publicado (el primero de cada horizonte). Ya no es el 1-ene-2026.
+- `nota`: texto listo para mostrar junto a la fecha ("de qué fecha son los datos"). Mostrarlo siempre.
+- `prueba_nueva`: cómo le fue al modelo en 2026, con datos que no existían cuando se eligió (para Metodología/pitch).
+  Los valores del ejemplo son ilustrativos: usar los del archivo.

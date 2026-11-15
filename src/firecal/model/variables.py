@@ -43,6 +43,42 @@ VARIABLES_MODELO_FIRMS = ["frp_hoy", "n_7d", "n_30d", "dias_desde_ultimo", "mes"
 VARIABLES_MODELO_CLIMA = ["tmax", "hrmin", "viento_max", "precip", "precip_7d"]
 
 
+def completar_con_noaa20(focos: pd.DataFrame) -> tuple[pd.DataFrame, pd.Timestamp]:
+    """Si Suomi NPP dejó de entregar datos antes que NOAA-20, usa NOAA-20 para los días siguientes (como si fuera SNPP).
+
+    Pasó en noviembre de 2026: FIRMS tiene Suomi NPP solo hasta el 1-nov y NOAA-20 hasta el día anterior. Medido en
+    2022-2025 con el modelo v3: con variables de NOAA-20 rinde igual (AUC 0,845 vs 0,846, precisión media 0,282 en
+    ambos); los conteos de 7 días de los dos satélites tienen correlación 0,986 y NOAA-20 ve ~5 % menos.
+    Devuelve los focos (con las filas sustitutas agregadas, `sustituto_noaa20` = True) y el último día de Suomi NPP.
+    """
+    snpp = focos["satelite"] == SATELITE_OBJETIVO
+    ultimo = pd.Timestamp(focos.loc[snpp, "fecha_local"].max()).normalize()
+    extra = focos[(focos["satelite"] == "NOAA20") & (focos["fecha_local"].dt.normalize() > ultimo)].copy()
+    salida = focos.assign(sustituto_noaa20=False)
+    if extra.empty:
+        return salida, ultimo
+    extra["satelite"] = SATELITE_OBJETIVO
+    extra["sustituto_noaa20"] = True
+    return pd.concat([salida, extra], ignore_index=True), ultimo
+
+
+def extender_clima(clima: pd.DataFrame, hasta: pd.Timestamp) -> tuple[pd.DataFrame, int]:
+    """Repite el último clima disponible de cada comuna hasta `hasta` (NASA POWER publica con ~4 días de retraso).
+
+    Solo afecta a los últimos días (los de la predicción publicada); entrenamiento y pruebas usan clima real. Medido en
+    2022-2025: con 3 días de rezago el modelo baja de AUC 0,846 a 0,824 y de precisión media 0,282 a 0,251 (la
+    climatología sola: 0,789 y 0,150). Devuelve el clima extendido y cuántos días se rellenaron.
+    """
+    ultimo = pd.Timestamp(clima["fecha"].max())
+    hasta = pd.Timestamp(hasta)
+    if hasta <= ultimo:
+        return clima, 0
+    base = clima[clima["fecha"] == ultimo]
+    dias = pd.date_range(ultimo + pd.Timedelta(days=1), hasta, freq="D")
+    extra = pd.concat([base.assign(fecha=d) for d in dias], ignore_index=True)
+    return pd.concat([clima, extra], ignore_index=True), len(dias)
+
+
 def matrices_diarias(
     focos: pd.DataFrame, region_ids: list[str], dias: pd.DatetimeIndex, satelite: str = SATELITE_OBJETIVO
 ) -> tuple[np.ndarray, np.ndarray]:

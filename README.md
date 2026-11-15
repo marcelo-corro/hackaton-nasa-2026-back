@@ -33,10 +33,12 @@ cp .env.example .env
 .venv/Scripts/python -m pytest
 .venv/Scripts/python scripts/01_descargar_datos.py     # ~120 MB, datos públicos, sin cuenta
 .venv/Scripts/python scripts/02_ingestar_firms.py
+.venv/Scripts/python scripts/01b_firms_reciente.py     # focos del año en curso por la API (MAP_KEY en .env); luego 02-04
 .venv/Scripts/python scripts/03_asignar_comunas.py     # ~1 min la primera vez
 .venv/Scripts/python scripts/04_marcar_calidad.py      # marcas de calidad + docs/calidad_datos.md
 .venv/Scripts/python scripts/05_armonizar.py           # serie armonizada + docs/armonizacion.md
 .venv/Scripts/python scripts/05b_clima_diario.py       # clima NASA POWER por comuna (opcional; 345 consultas, retoma si se corta)
+.venv/Scripts/python scripts/05c_clima_reciente.py     # clima del año en curso (NASA POWER), se suma a clima_diario.parquet
 .venv/Scripts/python scripts/06_eventos.py             # focos vs incendios + docs/eventos.md (opcional)
 .venv/Scripts/python scripts/07_calendario.py          # calendario con mediana, percentil y nivel
 .venv/Scripts/python scripts/08_riesgo.py              # modelo de riesgo + docs/riesgo.md (~1,5 min; usa el clima si existe)

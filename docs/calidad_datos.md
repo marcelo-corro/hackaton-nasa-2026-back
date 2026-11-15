@@ -1,19 +1,19 @@
 # Reporte de calidad de los focos FIRMS
-_Generado por `scripts/04_marcar_calidad.py` el 2026-11-14 17:42 UTC. No editar a mano: se regenera._
+_Generado por `scripts/04_marcar_calidad.py` el 2026-11-15 05:06 UTC. No editar a mano: se regenera._
 
 ## 1. Integridad
-- Focos: **821 539**, del 2000-11-01 al 2025-12-31.
+- Focos: **916 542**, del 2000-11-01 al 2026-11-14.
 - Duplicados exactos (lat, lon, fecha, hora, satélite): **0**.
 - Coordenadas fuera del rango de Chile (incluye Isla de Pascua): **0**.
-- Focos cuyo día local es distinto al día UTC: **0.8 %** (usar `fecha_local` en series diarias).
+- Focos cuyo día local es distinto al día UTC: **0.7 %** (usar `fecha_local` en series diarias).
 
 Valores nulos (la confianza numérica solo existe en MODIS):
 
 |  | nulos |
 |---|---|
-| confianza_modis | 631 822 |
-| region_id | 16 |
-| asignacion | 16 |
+| confianza_modis | 726 825 |
+| region_id | 46 578 |
+| asignacion | 46 578 |
 
 ## 2. Tipos de foco por sensor (%)
 Tipo 0 = vegetación, 1 = volcán, 2 = otra fuente fija (industria, faenas), 3 = costa afuera.
@@ -21,15 +21,15 @@ Tipo 0 = vegetación, 1 = volcán, 2 = otra fuente fija (industria, faenas), 3 =
 | sensor | tipo 0 | tipo 1 | tipo 2 | tipo 3 |
 |---|---|---|---|---|
 | MODIS | 79.65 | 1.54 | 18.78 | 0.03 |
-| VIIRS | 81.43 | 1.62 | 16.71 | 0.23 |
+| VIIRS | 82.40 | 1.44 | 15.86 | 0.30 |
 
 ## 3. Marcas de calidad por satélite (% de focos)
 
 | satelite | es_vegetacion | confianza_ok | frp_valido | pixel_grande | uso_base |
 |---|---|---|---|---|---|
 | Aqua | 87.3 | 94.7 | 100.0 | 31.4 | 83.5 |
-| NOAA20 | 82.4 | 89.7 | 99.9 | 20.0 | 72.8 |
-| SNPP | 80.9 | 91.6 | 99.9 | 20.7 | 73.4 |
+| NOAA20 | 83.6 | 89.9 | 99.9 | 20.2 | 74.0 |
+| SNPP | 81.7 | 91.6 | 99.9 | 20.6 | 74.1 |
 | Terra | 67.4 | 88.8 | 100.0 | 25.7 | 61.1 |
 
 ## 4. Versiones del producto
@@ -40,8 +40,10 @@ La versión indica la colección y el tipo de procesamiento (documentación de F
 | Aqua / 6.03 | 22 508 | 2018-01-01 | 2022-12-31 |
 | Aqua / 6.2 | 77 155 | 2002-07-04 | 2017-12-31 |
 | Aqua / 61.03 | 16 982 | 2023-01-01 | 2025-12-31 |
-| NOAA20 / 2 | 215 009 | 2018-04-01 | 2025-12-31 |
-| SNPP / 2 | 416 813 | 2012-01-20 | 2025-12-31 |
+| NOAA20 / 2 | 253 275 | 2018-04-01 | 2026-07-31 |
+| NOAA20 / 2.0NRT | 9 772 | 2026-08-01 | 2026-11-14 |
+| SNPP / 2 | 454 784 | 2012-01-20 | 2026-07-31 |
+| SNPP / 2.0NRT | 8 994 | 2026-08-01 | 2026-11-01 |
 | Terra / 6.03 | 15 871 | 2018-01-01 | 2022-12-31 |
 | Terra / 6.2 | 44 478 | 2000-11-01 | 2017-12-31 |
 | Terra / 61.03 | 12 723 | 2023-01-01 | 2025-12-31 |
@@ -77,6 +79,7 @@ Terra y Aqua (MODIS) se están desviando de su órbita original; Suomi NPP y NOA
 | 2023 | 19.05 | 18.83 | 18.83 | 14.45 |
 | 2024 | 19.38 | 18.83 | 18.72 | 14.23 |
 | 2025 | 19.77 | 18.83 | 18.90 | 13.97 |
+| 2026 | — | 18.75 | 18.75 | — |
 
 ## 6. Razones anuales entre satélites (focos `uso_base`)
 Si la razón cambia con los años, un factor calibrado con todo el período no sirve: hay que calibrar en el período en que ambos sensores son estables (ver [armonizacion.md](armonizacion.md)).

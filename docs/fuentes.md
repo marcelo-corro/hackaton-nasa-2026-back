@@ -31,6 +31,19 @@ cómo se verificó y la cita que corresponde. Lo que no esté en esta lista no s
   product: algorithm description and initial assessment. *Remote Sensing of Environment*, 143, 85-96.
   https://doi.org/10.1016/j.rse.2013.12.008
 
+## 1b. NASA FIRMS API (año en curso, con MAP_KEY)
+
+| Campo | Valor |
+|---|---|
+| Qué es | Focos VIIRS de Suomi NPP y NOAA-20 de 2026: versión estándar (SP) hasta el 31-07 y casi en tiempo real (NRT) después |
+| URL | `https://firms.modaps.eosdis.nasa.gov/api/area/csv/[MAP_KEY]/[FUENTE]/-76,-56,-66,-17/[1..5]/[fecha]` (la llave va en `.env`, nunca en el repo) |
+| Código | `scripts/01b_firms_reciente.py` → `data/raw/firms/viirs-snpp_2026_Chile.csv` y `viirs-jpss1_2026_Chile.csv` |
+| Bajado | 15-11-2026: Suomi NPP hasta el 01-11-2026 (FIRMS no tiene más), NOAA-20 hasta el 14-11-2026 |
+| Límites | 5.000 transacciones cada 10 minutos por llave; 5 días por consulta (área). Se usaron ~130 consultas |
+| `type` | NRT no lo trae: se infiere con la máscara de focos históricos no vegetales (< 0,3 km). Probado a ciegas en 2025: 99,0 % de los no vegetales detectados, 1,0 % de la vegetación marcada por error |
+
+Misma cita y agradecimiento que la sección 1.
+
 ## 2. Open-Meteo (ERA5): clima de la prueba de predicción
 
 | Campo | Valor |

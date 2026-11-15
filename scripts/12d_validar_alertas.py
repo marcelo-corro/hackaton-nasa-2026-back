@@ -60,6 +60,13 @@ def main() -> int:
     bt = bt[bt["region_id"].astype(str).isin(codigos)].rename(columns={"prob": "prob_foco"})
     bt["d"] = dia_entero(bt["fecha"])
 
+    # Prueba nueva 2026: hasta la víspera del último día de Suomi NPP (la verdad del día siguiente sigue siendo SNPP)
+    info = json.loads((config.PROCESSED_DIR / "riesgo_horizontes.json").read_text(encoding="utf-8"))
+    ultimo_snpp = pd.Timestamp(info.get("ultimo_dato_suomi_npp", "2025-12-31"))
+    if ultimo_snpp > pd.Timestamp("2026-01-02"):
+        PERIODOS[f"Prueba nueva 2026 (hasta {(ultimo_snpp - pd.Timedelta(days=1)).date()})"] = (
+            "2026-01-01", (ultimo_snpp - pd.Timedelta(days=2)).strftime("%Y-%m-%d"))
+
     filas = []
     for d, rd in bt.groupby("d"):
         hd = hist.contar(todos, np.zeros(len(s), np.int64), np.full(len(s), d + 1))  # días con fuego hasta t

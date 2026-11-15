@@ -51,6 +51,11 @@ esa comuna, deja descargar los focos y, si alcanza, muestra el riesgo para maña
   "Modelo en validación".
 - Aviso visible: el modelo anticipa bien la **propagación** de incendios activos, no dónde **empieza** uno.
 
+### Fecha de los datos (v0.6)
+Desde el 15-11-2026 los datos llegan hasta ayer (MAP_KEY de FIRMS). Mostrar `manifest.datos.valido_para` como
+"Riesgo para el …" y `manifest.datos.nota` al lado (focos hasta ayer, satélite sustituto y clima con rezago). Quitar
+cualquier texto fijo que diga "1 de enero de 2026" o "último día con datos satelitales, no hoy".
+
 ### P3b · Sectores de la comuna (piloto Región de Valparaíso, contrato v0.3)
 Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el contrato, sección v0.3.
 - **Selector de horizonte:** 24 h (`riesgo/ultimo.json`), 48 h (`riesgo/48h.json`), 7 días (`riesgo/7d.json`). Si el
