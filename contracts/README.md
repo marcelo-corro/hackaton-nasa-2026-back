@@ -1,8 +1,11 @@
-# Contrato back → front · versión 0.7
+# Contrato back → front · versión 0.8
 
 > Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
 
 **Cambios**
+- 0.8 (15-11-2026): **aditivo**. Nuevo `comunas.json` (en `manifest.archivos.comunas`): riesgo, clima del último
+  día, motivos y recomendaciones de las **345 comunas** (antes solo las 36 del piloto, dentro de `alertas/05.json`).
+  Detalle al final.
 - 0.7 (15-11-2026): **aditivo**. Nuevo `avance/activos.json` (en `manifest.archivos.avance`): incendios activos de
   Chile con su zona probable de avance (círculos validados) y el viento. Detalle al final.
 - 0.6 (15-11-2026): **aditivo**. `manifest.json` suma `datos`: de qué fecha es cada fuente (los datos ya no terminan
@@ -351,3 +354,28 @@ En cada elemento de `comunas[]`:
 - Flecha hacia `viento.hacia_grados` (0 = norte, 90 = este) **solo si `mostrar_flecha` es `true`** (viento fuerte):
   "el avance siguió el viento el 36 % de las veces (al azar, 25 %)". Con viento suave, sin flecha.
 - Mostrar `nota` cerca del mapa. Reemplaza el cono inventado del modo visión.
+
+## v0.8 · Clima, motivos y recomendaciones de todas las comunas (`comunas.json`)
+
+```json
+{"contrato": "0.8", "ejemplo": false, "valido_para": "2026-11-15", "ultimo_dato_focos": "2026-11-14",
+ "fecha_clima": "2026-11-11", "nota": "Clima observado del último día con datos (NASA POWER) ...",
+ "comunas": [{"region_id": "09202", "nombre": "Collipulli", "region": "Región de La Araucanía",
+              "riesgo": {"24": {"prob_foco": 0.285, "nivel": "alto"}, "48": {...}, "168": {...}},
+              "clima_ultimo_dia": {"fecha_clima": "2026-11-11", "tmax": 23.2, "hrmin": 53.0, "viento_max_kmh": 11.5,
+                                   "dias_sin_lluvia": 6, "condiciones": [], "...": "percentiles"},
+              "recomendaciones_clima": [], "recomendaciones": {"24": ["avisar_130"], "48": [...], "168": [...]},
+              "fuego_activo": true, "dias_con_fuego_7d": 1, "ultimo_fuego": "2026-11-14", "pct_dias_con_fuego_mes": 17.0,
+              "motivos": ["Fuego activo: focos en los últimos 3 días (último el 14-11-2026)", "..."]}]}
+```
+
+- Una entrada por comuna (345), con la **misma forma** que `alertas/{codigo_region}.json → comunas` del piloto, más
+  `region` y `recomendaciones` por horizonte. Para las 36 comunas de Valparaíso los valores coinciden con
+  `alertas/05.json` (salvo `pct_dias_con_fuego_mes`, que aquí cuenta los focos por polígono de comuna y allá por sector).
+- `recomendaciones[h]`: códigos de `recomendaciones.json` para el horizonte `h`, por el clima del último día y, si el
+  nivel de la comuna es alto o muy alto, "avisar al 130". La restricción de quemas solo se nombra en la región que la
+  tiene (05); en el resto, el calendario de quemas de CONAF. Lista vacía si no corresponde ninguna (no se inventan).
+- `motivos`: hechos verificables que acompañan el nivel (no son el peso de cada variable en el modelo). Fuera de
+  Valparaíso los focos pueden incluir alguna fuente industrial no marcada por FIRMS (lo dice `nota`).
+- `fuego_activo` marca toda comuna con algún foco en los 3 días; `avance/activos.json` ubica cada incendio en la comuna
+  de su centro, por eso puede haber una comuna con fuego activo sin incendio propio en ese archivo.

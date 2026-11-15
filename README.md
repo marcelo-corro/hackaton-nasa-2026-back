@@ -52,6 +52,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/09_exportar.py            # archivos del contrato en public/
 .venv/Scripts/python scripts/13_exportar_sectores.py   # suma sectores, alertas y riesgo 48 h / 7 días a public/
 .venv/Scripts/python scripts/15_exportar_avance.py     # incendios activos con su zona de avance (avance/activos.json)
+.venv/Scripts/python scripts/16_exportar_comunas.py    # clima, motivos y recomendaciones de las 345 comunas (comunas.json)
 .venv/Scripts/python scripts/10_publicar.py --sin-push # copia al repo de datos y hace commit; sin --sin-push, publica
 ```
 
