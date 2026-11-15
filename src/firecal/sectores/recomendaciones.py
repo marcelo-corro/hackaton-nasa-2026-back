@@ -59,6 +59,11 @@ FUENTES = {
     "conaf_valparaiso": {
         "nombre": "CONAF, llamado a prevenir incendios forestales en Valparaíso (11-12-2025)",
         "url": "https://www.conaf.cl/subsecretario-de-agricultura-refuerza-el-llamado-a-prevenir-incendios-forestales-en-valparaiso/"},
+    # Nacional: los cuatro números de emergencia forestal (verificado leyendo la página el 15-11-2026, docs/fuentes.md 3c)
+    "gob_numeros": {
+        "nombre": "Gobierno de Chile (gob.cl), Incendios forestales: conoce los números de emergencia y consejos para "
+                  "actuar ante un siniestro (consultado 15-11-2026)",
+        "url": "https://www.gob.cl/noticias/incendios-forestales-conoce-numeros-emergencia-consejos/"},
     "dmc_umbrales": {
         "nombre": "Dirección Meteorológica de Chile, monitoreo de variables meteorológicas asociadas al riesgo de "
                   "incendios forestales",
@@ -82,7 +87,7 @@ RECOMENDACIONES = {
                                      "comunidades de zonas de interfaz con cuatro talleres de prevención.",
                             "fuente": "conaf_comunidad"},
     "avisar_130": {"texto": "Ante cualquier foco, avisar de inmediato al 130 (CONAF), al 132 (Bomberos) o al 133 "
-                            "(Carabineros).", "fuente": "conaf_valparaiso"},
+                            "(Carabineros).", "fuente": "gob_numeros"},   # vale en todo el país (antes: nota de Valparaíso)
     # Por condición del clima (comuna)
     "faena_cero": {"texto": "Evitar trabajos con maquinaria o herramientas que produzcan chispas o calor (galleteras, "
                             "soldadoras, desbrozadoras) en las horas de mayor temperatura, en especial entre las 12:00 "
