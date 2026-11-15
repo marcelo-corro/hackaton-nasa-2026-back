@@ -46,8 +46,8 @@ def nota_datos(info: dict) -> str:
     """Texto corto sobre la frescura de los datos (focos, satélite sustituto y clima con rezago)."""
     partes = [f"Focos satelitales hasta el {info.get('ultimo_dato')}."]
     if info.get("sustitucion_noaa20"):
-        partes.append(f"Suomi NPP no tiene datos desde el {info.get('ultimo_dato_suomi_npp')}: los días siguientes usan "
-                      "NOAA-20 (mismo instrumento; en 2022-2025 el modelo rindió igual con él).")
+        partes.append(f"Suomi NPP tiene datos solo hasta el {info.get('ultimo_dato_suomi_npp')}: los días siguientes "
+                      "usan NOAA-20 (mismo instrumento; en 2022-2025 el modelo rindió igual con él).")
     if info.get("clima_rezago_dias"):
         partes.append(f"El clima (NASA POWER) llega hasta el {info.get('clima_hasta')}: se usa ese último clima "
                       "(con 3 días de rezago el modelo baja de AUC 0,85 a 0,82).")
