@@ -98,8 +98,42 @@ calibración 2020-2021; la prueba 2022-2025 se miró una vez (`docs/sectores_val
   de la región sí). El grueso del incendio en Viña fue el 3 de febrero (97 focos; el 4, 5 focos). Muestra el límite:
   el riesgo por comuna funciona mejor que la ubicación dentro de la comuna.
 
-## 6. Qué haría falta para una probabilidad por sector
+## 6. Modelo B: probabilidad por sector (`12c_modelo_sectores.py`, `firecal.sectores.modelo_b`)
+
+Pregunta: **si hay fuego en la comuna un día, ¿en qué sectores cae?** Una fila por sector y por día con fuego en su
+comuna (1,6 millones de filas, 5.165 sector-días con fuego). Variables, todas conocidas el día anterior: qué hay en el
+sector (vegetación, interfaz, pendiente, caminos de OpenStreetMap, distancia a lo construido), su historial y el de
+sus 8 vecinos, y el fuego de los 3 días previos (en la celda, en las vecinas y distancia al foco más cercano).
+Gradient boosting, entrena 2012-2019, calibra 2020-2021 (isotónica), 3 semillas.
+
+Punto de control fijado antes de mirar la prueba: superar al orden del A+ en calibración. **Pasó.** % del fuego que
+cae en el 10 % de sectores con mayor puntaje de su comuna (azar 10 %):
+
+| Período | Días | Orden A+ (historial, luego interfaz) | Cerca del fuego reciente | **Modelo B** |
+|---|---|---|---|---|
+| Calibración 2020-2021 | todos (602) | 33,6 % | 49,7 % | **57,7 %** |
+| | ignición (383) | 36,6 % | 29,5 % | **41,8 %** |
+| | propagación (219) | 26,5 % | **88,1 %** | 85,5 % |
+| Prueba 2022-2025 | todos (1.388) | 39,3 % | 42,4 % | **44,5 %** |
+| | ignición (1.087) | **44,9 %** | 37,2 % | 41,4 % |
+| | propagación (301) | 18,6 % | **59,5 %** | 55,8 % |
+
+(Los porcentajes del orden A+ difieren de la sección 4 porque aquí el historial se actualiza cada día.)
+
+- **Lectura honesta:** en la prueba el modelo B gana en el total, pero no en cada tipo de día. Con fuego nuevo, el
+  orden por historial fue mejor (en calibración había sido al revés); con fuego activo, "cerca del fuego de ayer" fue
+  algo mejor. Su valor es combinar ambas cosas, no anticipar dónde empieza un incendio. Por eso la **lista de
+  alertas mantiene el orden del A+** y el B se publica como capa adicional.
+- **Incendio grande** (si hay fuego en el sector, ¿es parte de un incendio de más de 10 focos?): AUC 0,915 en
+  calibración y **0,866 en prueba**; en fuegos nuevos 0,825 → **0,830** (estable). Comparado con lo observado en
+  2012-2025 cuadra en sectores silvestres (0,78 vs 73 % de los focos), de interfaz y urbanos; **sobreestima en
+  cultivos** (0,41 vs 10 %).
+- Probabilidad publicada por sector: `prob_si_fuego_en_comuna` (calibrada) y `prob_fuego_24h` = probabilidad de la
+  comuna a 24 h × la anterior. Para 48 h y 7 días se publica solo la condicional (sumarlas no da la de la semana).
+- Límite: las capas fijas son de ~2020-2021, contemporáneas con calibración; la prueba 2022-2025 no tiene ese problema.
+
+## 7. Qué faltaría para mejorar la probabilidad por sector
 Pronóstico del tiempo (aporta poco: con un pronóstico perfecto la vista de 7 días pasa de ×1,10 a ×1,12 sobre la
 climatología, ver `docs/decisiones.md`), vegetación que separe plantación de bosque
-nativo (MapBiomas Chile), área quemada para clasificar por tamaño (MapBiomas Fuego), caminos (OpenStreetMap) y datos
-oficiales de ignición con ubicación (CONAF), además de validarla contra el historial (29 % en prueba).
+nativo (MapBiomas Chile), área quemada para medir el tamaño en hectáreas (MapBiomas Fuego) y datos oficiales de
+ignición con ubicación (CONAF), que ayudarían justo donde el modelo B no supera al historial: los fuegos nuevos.

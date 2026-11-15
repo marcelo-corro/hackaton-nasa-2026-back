@@ -65,17 +65,30 @@ def riesgo_horizonte(riesgo: pd.DataFrame, horas: int, info: dict, calculado_utc
     }
 
 
+def campos_modelo_b(s, prob_comuna_24: float | None) -> dict:
+    """Campos del modelo B (v0.4) de un sector, si la tabla los trae; si no, vacío."""
+    if not hasattr(s, "prob_condicional") or pd.isna(s.prob_condicional):
+        return {}
+    return {
+        "prob_si_fuego_en_comuna": round(float(s.prob_condicional), 4),
+        "prob_fuego_24h": None if prob_comuna_24 is None else round(float(prob_comuna_24 * s.prob_condicional), 5),
+        "prob_incendio_grande": round(float(s.prob_grande), 3),
+        "percentil_en_comuna": round(float(s.percentil_en_comuna), 1),
+    }
+
+
 def sectores_geojson(sectores_comuna, niveles: dict[int, str], codigo_region: str,
-                     condiciones: list[str] | None = None) -> dict:
+                     condiciones: list[str] | None = None, prob_comuna_24: float | None = None) -> dict:
     """sectores/{region_id}.geojson: un Feature por sector, en WGS84, con rasgos, capas, historial y
     recomendaciones por horizonte: las del sector (según el nivel de la comuna, `niveles` = {horas: nivel}) más las
-    del clima del último día en la comuna (`condiciones`)."""
+    del clima del último día en la comuna (`condiciones`). Si la tabla trae el modelo B, suma sus campos (v0.4)."""
     g = sectores_comuna.to_crs("EPSG:4326")
     feats = []
     for s, geom in zip(g.itertuples(), g.geometry):
         geom = shapely.set_precision(geom.simplify(TOLERANCIA_SECTORES, preserve_topology=True), 10 ** -DECIMALES)
         rasgos = list(s.rasgos)
         feats.append({"type": "Feature", "geometry": mapping(geom), "properties": {
+            **campos_modelo_b(s, prob_comuna_24),
             "sector_id": s.sector_id, "region_id": s.region_id, "area_km2": round(float(s.area_km2), 3),
             "lat": float(s.lat), "lon": float(s.lon),
             "rasgos": rasgos, "exposicion": int(sum(r in rasgos for r in FACTORES_EXPOSICION)),
@@ -103,7 +116,11 @@ def focos_sector_csv(focos: pd.DataFrame) -> str:
 
 
 def _item_alerta(s: pd.Series, codigo_region: str, condiciones: dict[str, list[str]]) -> dict:
-    return {"sector_id": s["sector_id"], "region_id": s["region_id"], "comuna": s["comuna"],
+    b = {}
+    if "prob_condicional" in s and pd.notna(s["prob_condicional"]):
+        b = {"prob_si_fuego_en_comuna": round(float(s["prob_condicional"]), 4),
+             "prob_incendio_grande": round(float(s["prob_grande"]), 3)}
+    return {**b, "sector_id": s["sector_id"], "region_id": s["region_id"], "comuna": s["comuna"],
             "nivel_comuna": s["nivel"], "prob_foco_comuna": round(float(s["prob_foco"]), 3),
             "exposicion": int(s["exposicion"]), "rasgos": list(s["rasgos"]),
             "lat": float(s["lat"]), "lon": float(s["lon"]),

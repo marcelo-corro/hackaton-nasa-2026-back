@@ -20,7 +20,7 @@ from shapely.geometry import mapping
 from firecal import config
 from firecal.export.indice import index_html
 
-VERSION_CONTRATO = "0.3"  # 0.3: suma archivos de sectores, alertas y riesgo a 48 h / 7 días (ver export/sectores.py)
+VERSION_CONTRATO = "0.4"  # 0.3: sectores, alertas, riesgo 48 h / 7 días; 0.4: campos del modelo B en sectores
 TOLERANCIA_SIMPLIFICACION = 0.005  # grados (~500 m)
 DECIMALES_COORDENADAS = 4
 LIMITE_GEOJSON_MB = 3.0

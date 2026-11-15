@@ -1,8 +1,10 @@
-# Contrato back → front · versión 0.3
+# Contrato back → front · versión 0.4
 
 > Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
 
 **Cambios**
+- 0.4 (15-11-2026): **aditivo**. Los sectores y las alertas suman los campos del modelo B (probabilidad por sector y
+  de incendio grande) y el manifest suma `sectores.modelo_b` con sus métricas. Detalle al final.
 - 0.3 (14-11-2026): **aditivo** (los archivos de la 0.2 no cambian de forma). Suma riesgo a 48 h y 7 días y el piloto
   de sectores de la Región de Valparaíso: `riesgo/48h.json`, `riesgo/7d.json`, `sectores/{region_id}.geojson`,
   `sectores/{region_id}_focos.csv`, `alertas/{codigo_region}.json`, `recomendaciones.json`. El manifest agrega sus
@@ -232,3 +234,31 @@ industriales persistentes). `focos_incendio` = tamaño del incendio al que perte
 `rasgos` (código → texto), `condiciones` (código → `{texto, fuente}`; `fuente` es `null` en las relativas al mes),
 `recomendaciones` (código → `{texto, fuente}`), `fuentes` (código → `{nombre, url}`), `umbrales_rasgos` y
 `fuentes_capas`. El front muestra el texto y enlaza la fuente; no inventa recomendaciones.
+
+---
+
+## v0.4 · Modelo B: probabilidad por sector y de incendio grande
+
+Si `manifest.sectores.modelo_b` existe, cada `Feature` de `sectores/{region_id}.geojson` suma:
+
+| Campo | Qué es |
+|---|---|
+| `prob_si_fuego_en_comuna` | Si hay fuego en la comuna el día siguiente, probabilidad de que caiga en este sector (0-1, calibrada) |
+| `prob_fuego_24h` | Probabilidad de fuego en el sector mañana = probabilidad de la comuna a 24 h × la anterior (valores chicos: un sector es 1 km²) |
+| `prob_incendio_grande` | Si hay fuego en este sector, probabilidad de que sea parte de un incendio grande (más de 10 focos) |
+| `percentil_en_comuna` | Posición de `prob_si_fuego_en_comuna` dentro de la comuna (0-100): **úsalo para colorear el mapa** |
+
+Los ítems de `alertas/{codigo_region}.json → horizontes` suman `prob_si_fuego_en_comuna` y `prob_incendio_grande`.
+**El orden de la lista no cambia** (sigue el del A+: en la prueba, con fuego nuevo, ordenó mejor que el modelo B).
+
+`manifest.sectores.modelo_b`:
+
+```json
+{"modelo": "sectores_b_v1", "fecha_prediccion": "2026-01-01",
+ "captura_top10_prueba": {"modelo_b": 44.52, "orden_a": 39.34, "azar": 10.0},
+ "auc_incendio_grande_prueba": 0.866, "auc_incendio_grande_ignicion_prueba": 0.83,
+ "nota": "Prueba 2022-2025: el 10 % de sectores con mayor probabilidad de cada comuna concentró el 45 % del fuego ..."}
+```
+
+- Para 48 h y 7 días no hay `prob_fuego_*` por sector: se muestra `prob_si_fuego_en_comuna` junto al riesgo de la comuna.
+- Mostrar `nota` cerca del mapa. No decir que el modelo "predice dónde empieza un incendio".

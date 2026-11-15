@@ -64,6 +64,12 @@ def main() -> int:
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     sectores["rasgos"] = rasgos_sector(sectores)
+    ruta_b = pr / f"sectores_{args.region}_b.parquet"
+    modelo_b = None
+    if ruta_b.exists():  # modelo B (paso 12c): probabilidad dentro de la comuna y de incendio grande
+        sectores = sectores.merge(pd.read_parquet(ruta_b), on="sector_id", how="left")
+        sectores["percentil_en_comuna"] = 100 * sectores.groupby("region_id")["prob_condicional"].rank(pct=True)
+        modelo_b = json.loads((pr / f"modelo_b_{args.region}.json").read_text(encoding="utf-8"))
     codigos = sorted(sectores["region_id"].unique())
     nombres = dict(zip(sectores["region_id"], sectores["comuna"]))
     niveles = niveles_por_comuna(riesgo)
@@ -80,10 +86,12 @@ def main() -> int:
     cond_map = dict(zip(cond["region_id"], cond["condiciones"])) if len(cond) else {}
 
     # Sectores y focos por comuna
+    ult24 = riesgo[(riesgo["valido_para"] == riesgo["valido_para"].max()) & (riesgo["horizonte_horas"] == 24)]
+    prob24 = dict(zip(ult24["region_id"].astype(str), ult24["prob_foco"].astype(float)))
     for rid in codigos:
         s = sectores[sectores["region_id"] == rid]
         _json(publico / ARCHIVOS_SECTORES["sectores"].format(region_id=rid),
-              sectores_geojson(s, niveles.get(rid, {}), args.region, cond_map.get(rid, [])))
+              sectores_geojson(s, niveles.get(rid, {}), args.region, cond_map.get(rid, []), prob24.get(rid)))
         f = focos[focos["region_id"].astype(str) == rid]
         ruta = publico / ARCHIVOS_SECTORES["sectores_focos"].format(region_id=rid)
         ruta.write_text(focos_sector_csv(f), encoding="utf-8")
@@ -130,6 +138,21 @@ def main() -> int:
     m["contrato"] = VERSION_CONTRATO
     m["archivos"].update(ARCHIVOS_SECTORES)
     m["sectores"] = {"codigo_region": args.region, "regiones": codigos}
+    if modelo_b:
+        cal, pru = modelo_b["calibracion"], modelo_b.get("prueba", {})
+        orden_a = "Orden A+ (historial, luego interfaz)"
+        m["sectores"]["modelo_b"] = {
+            "modelo": modelo_b["prediccion"]["modelo"], "fecha_prediccion": modelo_b["prediccion"]["fecha"],
+            "captura_top10_prueba": {"modelo_b": pru.get("Modelo B (promedio)", {}).get("todos"),
+                                     "orden_a": pru.get(orden_a, {}).get("todos"), "azar": 10.0},
+            "auc_incendio_grande_prueba": modelo_b["grande"].get("prueba", {}).get("todos", {}).get("auc"),
+            "auc_incendio_grande_ignicion_prueba": modelo_b["grande"].get("prueba", {}).get("ignicion", {}).get("auc"),
+            "nota": "Prueba 2022-2025: el 10 % de sectores con mayor probabilidad de cada comuna concentró el "
+                    f"{pru.get('Modelo B (promedio)', {}).get('todos', 0):.0f} % del fuego (azar 10 %). Ordena mejor "
+                    "cuando ya hay fuego cerca; con fuego nuevo no supera al orden por historial. La probabilidad de "
+                    "incendio grande distingue bien (AUC "
+                    f"{modelo_b['grande'].get('prueba', {}).get('ignicion', {}).get('auc', 0):.2f} en fuegos nuevos).",
+        }
     ruta_manifest.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
 
     tam = sum(p.stat().st_size for d in ("sectores", "alertas") for p in (publico / d).glob("*")) / 1e6

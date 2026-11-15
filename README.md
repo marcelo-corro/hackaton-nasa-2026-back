@@ -43,6 +43,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/11_descargar_capas.py     # capas del piloto de sectores (~480 MB, una vez)
 .venv/Scripts/python scripts/12_sectores.py            # sectores de 1 km de la Región de Valparaíso (~40 s)
 .venv/Scripts/python scripts/12b_validar_sectores.py   # validación de la prioridad + docs/sectores_validacion.md
+.venv/Scripts/python scripts/12c_modelo_sectores.py --prueba  # modelo B por sector e incendio grande (~1 min)
 .venv/Scripts/python scripts/09_exportar.py            # archivos del contrato en public/
 .venv/Scripts/python scripts/13_exportar_sectores.py   # suma sectores, alertas y riesgo 48 h / 7 días a public/
 .venv/Scripts/python scripts/10_publicar.py --sin-push # copia al repo de datos y hace commit; sin --sin-push, publica
@@ -90,7 +91,7 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 8. Riesgo 24 h, 48 h y 7 días | `scripts/08_riesgo.py`, `firecal.model` | A | Listo: `hgb_firms_clima_v3` (14 variables, sin fuga), 24 h AUC 0,846 y precisión media 0,282 en 2022-2025; 7 días orientativo ([reporte](docs/riesgo.md)) |
 | 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Listo (PR #1); la portada `index.html` va en el PR #3 |
 | 10. Publicar en GitHub Pages | `scripts/10_publicar.py`, `firecal.export.publicar` | B | Listo (PR #1); datos reales publicados el 14-11 |
-| 11-13. Sectores (piloto Región de Valparaíso) | `scripts/11_descargar_capas.py`, `12_sectores.py`, `12b_validar_sectores.py`, `13_exportar_sectores.py`; `firecal.sectores` | A | Listo: 17.953 sectores de 1 km con historial, vegetación, interfaz y pendiente; prioridad validada (29 % del fuego en el 10 % de sectores, azar 10 %) ([reporte](docs/sectores.md)). `13` va después de `09` |
+| 11-13. Sectores (piloto Región de Valparaíso) | `scripts/11_descargar_capas.py`, `12_sectores.py`, `12b_validar_sectores.py`, `12c_modelo_sectores.py`, `13_exportar_sectores.py`; `firecal.sectores` | A | Listo: 17.953 sectores de 1 km con historial, vegetación, interfaz, pendiente y caminos; prioridad validada (29 % del fuego en el 10 % de sectores, azar 10 %); modelo B por sector (45 % en prueba) e incendio grande (AUC 0,87) ([reporte](docs/sectores.md)). `13` va después de `09` |
 
 Las tablas que se pasan entre pasos y sus validadores (`firecal.contratos`) están en
 [contracts/interno.md](contracts/interno.md).

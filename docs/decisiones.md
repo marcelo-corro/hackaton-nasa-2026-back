@@ -2,6 +2,17 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-15 (madrugada): modelo B por sector
+
+- **Modelo B publicado como capa adicional (contrato v0.4):** P(fuego en el sector | fuego en la comuna) con caminos
+  de OpenStreetMap, capas fijas, historial propio y de vecinos y fuego de los 3 días previos. Pasó el punto de control
+  fijado antes (superar al orden del A+ en calibración: 57,7 % vs 33,6 % del fuego en el 10 % de sectores). Prueba
+  2022-2025: 44,5 % vs 39,3 % (azar 10 %). Pero por tipo de día no gana: con fuego nuevo el orden por historial fue
+  mejor (44,9 % vs 41,4 %) y con fuego activo "cerca del fuego de ayer" fue algo mejor. Por eso las alertas siguen con
+  el orden del A+ y el B no se presenta como "predice dónde empieza un incendio". Detalle en `docs/sectores.md`, §6.
+- **Incendio grande:** si hay fuego en el sector, probabilidad de que sea parte de un incendio de más de 10 focos.
+  AUC 0,866 en prueba y 0,83 en fuegos nuevos (estable entre calibración y prueba). Sobreestima en cultivos.
+
 ## 2026-11-14 (noche): piloto por sector y modelo v3
 
 - **Piloto A+ por sector (Región de Valparaíso, 36 comunas continentales):** el equipo quería un mapa por sector con

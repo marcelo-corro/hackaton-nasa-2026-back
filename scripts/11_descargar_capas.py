@@ -6,6 +6,8 @@ Capas (detalle y citas en docs/fuentes.md):
 - Copernicus DEM GLO-30 (30 m): elevación, para la pendiente. Bloques de 1° × 1° (nombre = esquina suroeste).
 - Interfaz urbano-forestal global (WUI) de Schug et al. (2023), 10 m, año 2020. Viene en un zip de 1,7 GB para
   Sudamérica; se leen SOLO los bloques de 100 km que tocan la región, con peticiones HTTP por rango (sin bajar el zip).
+- Caminos de OpenStreetMap (ODbL) vía Overpass API: vías de autopista a huella rural (`track`) dentro del límite
+  administrativo de la región (no del rectángulo: el de Valparaíso incluiría Santiago). Para el modelo B.
 
 Si un archivo ya existe con el tamaño correcto, no se vuelve a bajar. Todo queda en data/raw/sectores/ (no se versiona)
 y anotado en data/raw/registro_descargas.csv (URL, tamaño, SHA-256, estado, fecha).
@@ -43,6 +45,9 @@ CAMPOS_REGISTRO = ["fecha_utc", "fuente", "url", "archivo", "bytes", "sha256", "
 WORLDCOVER_URL = "https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/ESA_WorldCover_10m_2021_v200_{t}_Map.tif"
 DEM_URL = "https://copernicus-dem-30m.s3.amazonaws.com/{n}/{n}.tif"
 WUI_ZIP_URL = "https://zenodo.org/records/7941460/files/SA.zip"
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+CLASES_CAMINO = "motorway|trunk|primary|secondary|tertiary|unclassified|residential|track"
+ISO_REGION = {"05": "CL-VS"}  # código ISO 3166-2 de la región en OpenStreetMap
 
 
 def _sha256(ruta: Path) -> str:
@@ -196,6 +201,26 @@ def bajar_wui(sesion, region: gpd.GeoDataFrame) -> list[dict]:
     return filas
 
 
+def bajar_caminos(sesion, codigo: str) -> list[dict]:
+    """Caminos de OpenStreetMap de la región (consulta Overpass por límite administrativo, con geometría)."""
+    consulta = (f'[out:json][timeout:900];area["ISO3166-2"="{ISO_REGION[codigo]}"]->.a;'
+                f'way["highway"~"^({CLASES_CAMINO})(_link)?$"](area.a);out geom;')
+    destino = DESTINO / "osm" / f"caminos_{codigo}.json"
+    if destino.exists() and destino.stat().st_size > 0:
+        estado = "ya estaba (la consulta no se repite)"
+    else:
+        r = sesion.post(OVERPASS_URL, data={"data": consulta}, timeout=1800)
+        r.raise_for_status()
+        datos = r.json()
+        if not datos.get("elements"):
+            raise IOError(f"Overpass no devolvió caminos: {str(datos.get('remark', ''))[:200]}")
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        destino.write_bytes(r.content)
+        estado = f"descargado ({len(datos['elements']):,} vías; OSM al {datos['osm3s']['timestamp_osm_base']})"
+    return [{"fuente": "OpenStreetMap vía Overpass API (ODbL)", "url": f"{OVERPASS_URL} :: {consulta}",
+             "ruta": destino, "estado": estado}]
+
+
 def _anotar(filas: list[dict]) -> None:
     nuevo = not REGISTRO.exists()
     REGISTRO.parent.mkdir(parents=True, exist_ok=True)
@@ -211,7 +236,8 @@ def _anotar(filas: list[dict]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--region", default="05", help="código de región (2 dígitos); piloto: 05")
-    parser.add_argument("--solo", nargs="+", choices=["worldcover", "dem", "wui"], default=["worldcover", "dem", "wui"])
+    capas = ["worldcover", "dem", "wui", "caminos"]
+    parser.add_argument("--solo", nargs="+", choices=capas, default=capas)
     args = parser.parse_args()
 
     region = comunas_region(args.region)
@@ -223,7 +249,8 @@ def main() -> int:
     filas: list[dict] = []
     for capa, funcion in (("worldcover", lambda: bajar_worldcover(sesion, limites)),
                           ("dem", lambda: bajar_dem(sesion, limites)),
-                          ("wui", lambda: bajar_wui(sesion, region))):
+                          ("wui", lambda: bajar_wui(sesion, region)),
+                          ("caminos", lambda: bajar_caminos(sesion, args.region))):
         if capa not in args.solo:
             continue
         print(f"{capa}...", flush=True)

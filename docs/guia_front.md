@@ -57,8 +57,8 @@ Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el c
   archivo trae `orientativo: true`, mostrar su `nota` junto al mapa. No comparar probabilidades entre horizontes.
 - **Mapa de la comuna:** color de la comuna por `nivel` del horizonte elegido; encima, los sectores
   (`sectores/{id}.geojson`) y el heatmap de focos (`sectores/{id}_focos.csv`). Capas para elegir: historial
-  (`dias_con_fuego`), interfaz (`pct_interfaz`), pastizal, bosque/matorral, pendiente. **Leyenda: "historial" o
-  "qué hay en el sector", nunca "probabilidad del sector"** (el sector no tiene probabilidad; ver `docs/sectores.md`).
+  (`dias_con_fuego`), interfaz (`pct_interfaz`), pastizal, bosque/matorral, pendiente. En esas capas la leyenda dice
+  "historial" o "qué hay en el sector"; la probabilidad por sector viene solo del modelo B (v0.4, más abajo).
 - **Ficha del sector (al hacer clic):** rasgos en texto (`recomendaciones.json → rasgos`), % de cada capa, días con
   fuego y último fuego, y las recomendaciones del horizonte elegido (`recomendaciones[horizonte]`) con el enlace a
   su fuente oficial.
@@ -67,6 +67,10 @@ Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el c
   `recomendaciones.json → condiciones`) y sus `recomendaciones_clima` (por ejemplo, Faena Cero de CONAF con calor).
   Si aparece `condicion_30_30_30`, destacarla, sin decir que "habrá incendio" (la DMC aclara que no lo pronostica).
   Las recomendaciones de cada sector y alerta ya incluyen las del clima.
+- **Modelo B (v0.4, si existe `manifest.sectores.modelo_b`):** el mapa de sectores puede colorearse por
+  `percentil_en_comuna` ("dónde caería el fuego si hay fuego en la comuna"); la ficha suma `prob_fuego_24h` y
+  `prob_incendio_grande` ("si hay fuego aquí, probabilidad de que sea grande"). Mostrar la `nota` del modelo. Ahora sí
+  hay probabilidad por sector, pero con su contexto: es condicional a que haya fuego en la comuna.
 - **Caso 2024 (opcional):** `caso` muestra la lista del 4-feb-2024 y qué sectores tuvieron fuego (ninguno de la lista
   lo tuvo). Si se usa, contarlo así: el riesgo por comuna acertó (Viña `muy_alto`), la ubicación dentro de la comuna no.
 

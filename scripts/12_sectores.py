@@ -28,6 +28,7 @@ from firecal import config  # noqa: E402
 from firecal.sectores.capas import (  # noqa: E402
     CLASES_WORLDCOVER, CLASES_WUI, MAX_SIN_DATO_WUI, resumen_categorico, resumen_pendiente,
 )
+from firecal.sectores.caminos import distancia_urbano, leer_caminos, variables_caminos  # noqa: E402
 from firecal.sectores.grilla import grilla_sectores  # noqa: E402
 from firecal.sectores.historial import (  # noqa: E402
     asignar_sector, focos_con_evento, fuentes_persistentes, historial_por_sector,
@@ -72,6 +73,11 @@ def main() -> int:
     tabla = (sectores.merge(historial, on="sector_id").merge(veg, on="sector_id").merge(wui, on="sector_id")
              .merge(pend, on="sector_id"))
     tabla["frac_combustible"] = tabla[["frac_arboles", "frac_matorral", "frac_pastizal"]].sum(axis=1)
+    tabla["dist_urbano_km"] = distancia_urbano(tabla).to_numpy()
+    ruta_caminos = CAPAS / "osm" / f"caminos_{args.region}.json"
+    if ruta_caminos.exists():  # opcional: lo baja `11_descargar_capas.py --solo caminos` (modelo B)
+        print("Caminos (OpenStreetMap)...", flush=True)
+        tabla = tabla.merge(variables_caminos(tabla, leer_caminos(ruta_caminos)), on="sector_id")
     # WUI: fracciones sobre la parte del sector con dato; vacías si falta más de la mitad
     con_dato = 1 - tabla["frac_wui_sin_dato"]
     for c in ["frac_wui_bosque", "frac_wui_pastizal", "frac_no_wui"]:
