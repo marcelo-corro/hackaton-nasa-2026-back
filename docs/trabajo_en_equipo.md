@@ -81,8 +81,8 @@ Los contratos que unen cada flecha están en [contracts/interno.md](../contracts
 ## 5. Puesta en marcha (B, unos 20 minutos)
 
 ```bash
-git clone https://github.com/marcelo-corro/aivital-incendios-back.git
-cd aivital-incendios-back
+git clone https://github.com/marcelo-corro/hackaton-nasa-2026-back.git
+cd hackaton-nasa-2026-back
 python -m venv .venv
 .venv/Scripts/python -m pip install -e ".[dev]"
 cp .env.example .env
@@ -158,8 +158,8 @@ armonización de A.
 **Objetivo:** que los archivos de `public/` lleguen a la URL que ya usa el front.
 
 **Ya está hecho (14-11):** el repo público
-[marcelo-corro/aivital-incendios-datos](https://github.com/marcelo-corro/aivital-incendios-datos) con Pages activo
-desde `main` (raíz, con `.nojekyll`). URL base: **https://marcelo-corro.github.io/aivital-incendios-datos**.
+[marcelo-corro/hackaton-nasa-2026-datos](https://github.com/marcelo-corro/hackaton-nasa-2026-datos) con Pages activo
+desde `main` (raíz, con `.nojekyll`). URL base: **https://marcelo-corro.github.io/hackaton-nasa-2026-datos**.
 Hoy sirve los datos de ejemplo y responde con CORS abierto (`Access-Control-Allow-Origin: *`). José ya tiene la URL.
 Pages solo es gratis en repos públicos: por eso este repo lleva **solo archivos generados**, nada de código,
 `.env` ni llaves.
@@ -171,7 +171,7 @@ Pages solo es gratis en repos públicos: por eso este repo lleva **solo archivos
      copia `public/`, hace commit `datos AAAA-MM-DD HH:MM` y push. Antes de publicar, que verifique que
      `manifest.json` diga `"ejemplo": false`.
   4. Después del push, esperar ~1 minuto y abrir
-     https://marcelo-corro.github.io/aivital-incendios-datos/manifest.json para confirmar la nueva fecha de
+     https://marcelo-corro.github.io/hackaton-nasa-2026-datos/manifest.json para confirmar la nueva fecha de
      `generado_utc`.
   5. Avisar a José que ya hay datos reales y actualizar el aviso "Estado actual" del README del repo de datos.
 - **Listo cuando:** el front muestra las 345 comunas con datos reales desde esa URL.

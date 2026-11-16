@@ -1,4 +1,4 @@
-# aivital-incendios-back
+# hackaton-nasa-2026-back
 
 Back del equipo **AIVital** para NASA Space Apps 2026, desafío
 [*Harmonization of MODIS and VIIRS Hot Spots*](https://www.spaceappschallenge.org/2026/challenges/modis-and-viirs-hot-spots/)
@@ -8,8 +8,8 @@ Toma los focos de calor de FIRMS (MODIS desde 2000, VIIRS desde 2012), los **arm
 de importar, arma un **calendario de actividad de quema** por comuna con anomalías contra la historia y estima el
 **riesgo de focos a 24-48 h**. El resultado son archivos estáticos que consume el front (repo aparte) según el
 [contrato](contracts/README.md), publicados en
-**https://marcelo-corro.github.io/aivital-incendios-datos** (repo público
-[aivital-incendios-datos](https://github.com/marcelo-corro/aivital-incendios-datos); con datos reales de las
+**https://marcelo-corro.github.io/hackaton-nasa-2026-datos** (repo público
+[hackaton-nasa-2026-datos](https://github.com/marcelo-corro/hackaton-nasa-2026-datos); con datos reales de las
 345 comunas desde el 14-11-2026).
 
 ## Empieza aquí
@@ -57,7 +57,7 @@ cp .env.example .env
 ```
 
 Para publicar hace falta el clon del repo de datos (`DATOS_REPO_DIR` en `.env`, por defecto
-`../aivital-incendios-datos`). Publica **una sola persona** (B), y solo desde `main`.
+`../hackaton-nasa-2026-datos` o, si no existe, `../aivital-incendios-datos`, el nombre anterior). Publica **una sola persona** (B), y solo desde `main`.
 
 Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usa
 `f.region_id.eq("05109").fillna(False)` en vez de `f.region_id == "05109"` combinado con `&`.

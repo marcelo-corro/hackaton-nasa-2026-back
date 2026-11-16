@@ -200,12 +200,12 @@ Inicio de sesión, base de datos, dibujar polígonos, editar datos, notificacion
 Todo el front depende de **una URL base**, por ejemplo `DATA_BASE_URL`:
 
 ```
-https://marcelo-corro.github.io/aivital-incendios-datos
+https://marcelo-corro.github.io/hackaton-nasa-2026-datos
 ```
 
-**Ya funciona** (repo público [aivital-incendios-datos](https://github.com/marcelo-corro/aivital-incendios-datos)) y
+**Ya funciona** (repo público [hackaton-nasa-2026-datos](https://github.com/marcelo-corro/hackaton-nasa-2026-datos)) y
 permite leer los archivos desde cualquier dominio (CORS abierto). Prueba:
-https://marcelo-corro.github.io/aivital-incendios-datos/manifest.json
+https://marcelo-corro.github.io/hackaton-nasa-2026-datos/manifest.json
 
 La URL no cambia nunca: lo que cambia es el contenido. No tienes que tocar nada en el front para pasar de
 ejemplo a datos reales; basta recargar.

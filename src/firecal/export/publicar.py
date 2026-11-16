@@ -44,7 +44,7 @@ def verificar_destino(repo: Path) -> None:
     """Comprueba que `repo` sea un clon de git (no una carpeta cualquiera que se vaya a vaciar)."""
     if not (repo / ".git").exists():
         raise PublicacionError(
-            f"{repo} no es un clon de aivital-incendios-datos. Clónalo ahí o apunta DATOS_REPO_DIR en .env."
+            f"{repo} no es un clon de hackaton-nasa-2026-datos. Clónalo ahí o apunta DATOS_REPO_DIR en .env."
         )
 
 

@@ -1,4 +1,4 @@
-"""Paso 10 del pipeline (B): publica public/ en GitHub Pages (repo aivital-incendios-datos).
+"""Paso 10 del pipeline (B): publica public/ en GitHub Pages (repo hackaton-nasa-2026-datos).
 
 Copia PUBLIC_DIR al clon local del repo de datos (DATOS_REPO_DIR), hace commit y, si no se pide lo contrario,
 push. Antes verifica que manifest.json diga "ejemplo": false. Después espera a que Pages sirva el nuevo manifest.
