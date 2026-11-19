@@ -81,6 +81,10 @@ def pasos(completa: bool) -> list[list[str]]:
     p: list[list[str]] = []
     if cargar["firms"]:
         p.append(["01_descargar_datos"])
+    # 01b usa los focos históricos (focos.parquet) para deducir el tipo de los focos casi en tiempo real: con la caché
+    # vacía se ingiere primero el archivo 2000-2025 y después se vuelve a ingerir con el año en curso.
+    if cargar["firms"] or not (config.INTERIM_DIR / "focos.parquet").exists():
+        p.append(["02_ingestar_firms"])
     p += [["01b_firms_reciente"], ["02_ingestar_firms"], ["03_asignar_comunas"], ["04_marcar_calidad"]]
     if cargar["serie"]:
         p += [["05_armonizar"], ["07_calendario"]]

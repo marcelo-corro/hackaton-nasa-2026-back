@@ -30,10 +30,29 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.stdout.reconfigure(encoding="utf-8")  # la consola de Windows (cp1252) no imprime "→" ni "±"
 from firecal import config  # noqa: E402
-from firecal.avance import a_favor_del_viento, error_angular  # noqa: E402
+from firecal.avance import a_favor_del_viento, error_angular, pares_avance  # noqa: E402
 from firecal.reportes import tabla_md  # noqa: E402
+from firecal.sectores.historial import focos_con_evento  # noqa: E402
 
 FIN_CAL = pd.Timestamp("2021-12-31")
+# Datos con que se hizo la validación publicada (15-11-2026): la prueba 2022-2026 se miró una vez. Si la tabla de
+# pares se rehace (por ejemplo, en una máquina nueva), se corta en la misma fecha para dar exactamente la misma tabla
+# (6.674 pares, verificado el 19-11-2026) y los mismos parámetros.
+FIN_DATOS_VALIDACION = pd.Timestamp("2026-11-15")
+
+
+def pares(ruta: Path) -> pd.DataFrame:
+    """Pares (incendio, día d) con frente nuevo en d+1. Se arman una vez desde los focos y quedan en `ruta`."""
+    if ruta.exists():
+        return pd.read_parquet(ruta)
+    f = pd.read_parquet(config.INTERIM_DIR / "focos_calidad.parquet",
+                        columns=["lat", "lon", "fecha_local", "satelite", "uso_base", "frp", "region_id"])
+    ev = focos_con_evento(f)
+    ev = ev[ev["region_id"].notna() & (ev["fecha_local"] < FIN_DATOS_VALIDACION)]
+    p = pares_avance(ev)
+    p.to_parquet(ruta, index=False)
+    print(f"Pares de avance armados desde los focos: {len(p):,} -> {ruta}")
+    return p
 
 
 def media_circular(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -51,7 +70,7 @@ def resumen(err: np.ndarray) -> dict:
 
 
 def main() -> int:
-    p = pd.read_parquet(config.PROCESSED_DIR / "avance_pares.parquet")
+    p = pares(config.PROCESSED_DIR / "avance_pares.parquet")
     v = pd.read_parquet(config.INTERIM_DIR / "viento_diario.parquet").rename(columns={"fecha_local": "fecha"})
     v["region_id"] = v["region_id"].astype(str)
     p["region_id"] = p["region_id"].astype(str)
