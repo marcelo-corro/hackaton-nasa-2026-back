@@ -76,6 +76,15 @@ def test_sincroniza_reemplaza_lo_publicado_y_conserva_readme_nojekyll_y_git(tmp_
     assert (repo / "manifest.json").exists() and (repo / "regiones.geojson").exists()
 
 
+def test_conserva_la_automatizacion_de_github(tmp_path):
+    publico, repo = _public(tmp_path), _repo(tmp_path)
+    flujo = repo / ".github" / "workflows" / "actualizar.yml"
+    flujo.parent.mkdir(parents=True)
+    flujo.write_text("name: diario", encoding="utf-8")
+    sincronizar(publico, repo)
+    assert flujo.read_text(encoding="utf-8") == "name: diario"
+
+
 def test_crea_nojekyll_si_no_estaba(tmp_path):
     publico, repo = _public(tmp_path), _repo(tmp_path)
     (repo / ".nojekyll").unlink()

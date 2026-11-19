@@ -59,6 +59,28 @@ cp .env.example .env
 Para publicar hace falta el clon del repo de datos (`DATOS_REPO_DIR` en `.env`, por defecto
 `../hackaton-nasa-2026-datos` o, si no existe, `../aivital-incendios-datos`, el nombre anterior). Publica **una sola persona** (B), y solo desde `main`.
 
+### Actualización diaria automática
+
+Desde el 19-11-2026 la corre GitHub Actions en el repo de datos
+([`.github/workflows/actualizar.yml`](https://github.com/marcelo-corro/hackaton-nasa-2026-datos/blob/main/.github/workflows/actualizar.yml)),
+todos los días a las 11:00 UTC (08:00 en Chile en verano). Hace lo mismo que la lista de arriba con un solo comando:
+
+```bash
+python scripts/diario.py      # pipeline del día y controles; no publica (eso lo hace 10_publicar.py después)
+```
+
+- **Primera vez o caché vacía:** `diario.py` detecta qué falta (archivo FIRMS 2000-2025, comunas, serie armonizada,
+  calendario, clima 2012-2025, capas de sectores, parámetros de avance) y lo descarga o rehace (1-2 h). Los días
+  siguientes reutiliza todo desde la caché de Actions y solo corre lo de cada día.
+- **Controles antes de publicar** (`firecal.export.controles`): tests del back, riesgo para hoy (hasta 2 días de
+  atraso si FIRMS se demora), 345 comunas en cada archivo, contrato vigente, archivos completos y que la MAP_KEY no
+  aparezca. Si algo falla **no se publica**: queda en línea lo del día anterior y GitHub avisa por correo.
+- **La MAP_KEY** va como secreto `FIRMS_MAP_KEY` del repo de datos (nunca en el código).
+- **A mano:** en el repo de datos, *Actions → Actualización diaria → Run workflow* (se puede desmarcar "Publicar"
+  para una prueba, o marcar "Carga completa"). El resumen de cada corrida muestra la fecha del riesgo, las comunas en
+  alto y los incendios activos; los archivos generados quedan 7 días como artefacto.
+- `10_publicar.py` conserva `.github/` en el repo de datos (si lo borrara, la automatización se eliminaría sola).
+
 Las tablas de `data/interim/` usan tipos con nulos de pandas (`string`, `Int8`). Para filtrar, usa
 `f.region_id.eq("05109").fillna(False)` en vez de `f.region_id == "05109"` combinado con `&`.
 

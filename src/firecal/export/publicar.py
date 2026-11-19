@@ -10,7 +10,9 @@ import json
 import shutil
 from pathlib import Path
 
-CONSERVAR = {"README.md", ".nojekyll", ".git"}  # lo que vive en el repo de datos y no se genera
+# Lo que vive en el repo de datos y no se genera. `.github` guarda la actualización diaria (GitHub Actions): si se
+# borrara al publicar, la automatización se eliminaría a sí misma en su primera corrida.
+CONSERVAR = {"README.md", ".nojekyll", ".git", ".github"}
 
 
 class PublicacionError(RuntimeError):
@@ -49,7 +51,7 @@ def verificar_destino(repo: Path) -> None:
 
 
 def sincronizar(publico: Path, repo: Path) -> None:
-    """Deja `repo` igual a `publico`, salvo README.md, .nojekyll y .git, que se conservan."""
+    """Deja `repo` igual a `publico`, salvo README.md, .nojekyll, .git y .github, que se conservan."""
     verificar_destino(repo)
     for item in repo.iterdir():
         if item.name in CONSERVAR:
