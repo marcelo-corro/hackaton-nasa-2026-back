@@ -27,6 +27,7 @@ def _repo(tmp_path):
     repo = tmp_path / "datos"
     (repo / ".git").mkdir(parents=True)
     (repo / "README.md").write_text("readme del repo de datos", encoding="utf-8")
+    (repo / "LICENSE").write_text("licencia de los datos", encoding="utf-8")
     (repo / ".nojekyll").write_text("", encoding="utf-8")
     (repo / "calendario").mkdir()
     (repo / "calendario" / "99999.json").write_text("viejo", encoding="utf-8")
@@ -64,11 +65,12 @@ def test_no_vacia_una_carpeta_que_no_es_un_clon(tmp_path):
     assert (carpeta / "importante.txt").exists()
 
 
-def test_sincroniza_reemplaza_lo_publicado_y_conserva_readme_nojekyll_y_git(tmp_path):
+def test_sincroniza_reemplaza_lo_publicado_y_conserva_readme_licencia_nojekyll_y_git(tmp_path):
     publico, repo = _public(tmp_path), _repo(tmp_path)
     sincronizar(publico, repo)
 
     assert (repo / "README.md").read_text(encoding="utf-8") == "readme del repo de datos"
+    assert (repo / "LICENSE").read_text(encoding="utf-8") == "licencia de los datos"
     assert (repo / ".nojekyll").exists() and (repo / ".git").is_dir()
     assert not (repo / "viejo.json").exists()
     assert not (repo / "calendario" / "99999.json").exists()

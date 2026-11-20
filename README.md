@@ -164,3 +164,35 @@ confianza nominal o alta). Lo que muestra el [reporte de calidad](docs/calidad_d
 - Notebooks: `notebooks/NN-nombre-tema.ipynb`. Instalar `nbstripout` una vez por clon
   (`.venv/Scripts/python -m nbstripout --install`) para no subir salidas. Lo que funciona pasa a `src/`.
 - Cambios de forma en los archivos del front: subir la versión del contrato y avisar antes de mezclar.
+
+## Equipo
+
+Proyecto del NASA Space Apps Challenge 2026 (sede Santiago), desafío *Harmonization of MODIS and VIIRS Hot Spots*.
+Por orden alfabético de apellido:
+
+| Integrante | Rol | GitHub |
+|---|---|---|
+| Marcelo Corro | Software y datos · coordinación técnica | [marcelo-corro](https://github.com/marcelo-corro) |
+| José De Los Santos | Interfaz y presentación | [RemLover68](https://github.com/RemLover68) |
+| Katherine González | Investigación | — |
+| Sebastián Ríos | Investigación | — |
+| David Serrudo | Software y datos | [Daavidasc](https://github.com/Daavidasc) |
+
+| Área | Integrantes |
+|---|---|
+| Datos y modelos (back) | Marcelo Corro, David Serrudo |
+| Sitio web (front) | Marcelo Corro, David Serrudo, José De Los Santos |
+| Investigación (fuentes de datos y respaldo de las recomendaciones) | Katherine González, Sebastián Ríos |
+| Presentación | José De Los Santos |
+
+Los roles no son fijos: cada integrante puede sumarse a otras áreas para aprender y aportar. El detalle de cada
+cambio al código está en el historial de commits y en
+[Contributors](https://github.com/marcelo-corro/hackaton-nasa-2026-back/graphs/contributors). Más sobre el equipo
+y la historia del proyecto en [Quiénes somos](https://marcelo-corro.github.io/hackaton-nasa-2026-front/beta/quienes-somos).
+
+## Licencia
+
+El código está bajo licencia [MIT](LICENSE), con «Copyright (c) 2026 Los autores de Preaviso»: las personas de la
+sección [Equipo](#equipo) y quienes se sumen después. Los datos que publica el pipeline están bajo CC BY 4.0 (ver el
+[repo de datos](https://github.com/marcelo-corro/hackaton-nasa-2026-datos)); los datos de terceros que usa
+conservan sus propias condiciones, registradas en [docs/fuentes.md](docs/fuentes.md).
