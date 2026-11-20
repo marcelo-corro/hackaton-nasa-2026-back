@@ -63,7 +63,9 @@ Para publicar hace falta el clon del repo de datos (`DATOS_REPO_DIR` en `.env`, 
 
 Desde el 19-11-2026 la corre GitHub Actions en el repo de datos
 ([`.github/workflows/actualizar.yml`](https://github.com/marcelo-corro/hackaton-nasa-2026-datos/blob/main/.github/workflows/actualizar.yml)),
-todos los días a las 11:00 UTC (08:00 en Chile en verano). Hace lo mismo que la lista de arriba con un solo comando:
+todos los días a las 11:17 UTC (08:17 en Chile en verano), con una corrida de respaldo a las 14:47 UTC que solo
+trabaja si ese día no se publicó (GitHub puede atrasar o saltarse corridas programadas). Hace lo mismo que la lista de
+arriba con un solo comando:
 
 ```bash
 python scripts/diario.py      # pipeline del día y controles; no publica (eso lo hace 10_publicar.py después)
