@@ -190,7 +190,7 @@ Por orden alfabético de apellido:
 Los roles no son fijos: cada integrante puede sumarse a otras áreas para aprender y aportar. El detalle de cada
 cambio al código está en el historial de commits y en
 [Contributors](https://github.com/marcelo-corro/hackaton-nasa-2026-back/graphs/contributors). Más sobre el equipo
-y la historia del proyecto en [Quiénes somos](https://marcelo-corro.github.io/hackaton-nasa-2026-front/beta/quienes-somos).
+y la historia del proyecto en [Quiénes somos](https://marcelo-corro.github.io/hackaton-nasa-2026-front/quienes-somos).
 
 ## Licencia
 
