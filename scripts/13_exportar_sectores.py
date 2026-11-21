@@ -26,6 +26,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "src"))
 from firecal import config  # noqa: E402
 from firecal.contratos import validar_riesgo  # noqa: E402
+from firecal.export.comunas import ETIQUETA_CLIMA, fecha_clima_a_mostrar  # noqa: E402
 from firecal.export.contrato import VERSION_CONTRATO  # noqa: E402
 from firecal.export.sectores import (  # noqa: E402
     ARCHIVOS_SECTORES, alertas_region, catalogo_recomendaciones, focos_sector_csv, niveles_por_comuna,
@@ -80,7 +81,9 @@ def main() -> int:
     validar_riesgo(riesgo)
     info = json.loads((pr / "riesgo_horizontes.json").read_text(encoding="utf-8"))
     backtest = pd.read_parquet(pr / "riesgo_backtest.parquet")
-    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet")
+    ruta_pron = config.INTERIM_DIR / "pronostico_diario.parquet"
+    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet",
+                         pd.read_parquet(ruta_pron) if ruta_pron.exists() else None)
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     sectores["rasgos"] = rasgos_sector(sectores)
@@ -98,10 +101,12 @@ def main() -> int:
     for horas, clave in ((48, "riesgo_48h"), (168, "riesgo_7d")):
         _json(publico / ARCHIVOS_SECTORES[clave], riesgo_horizonte(riesgo, horas, info, ahora))
 
-    # Clima observado del último día por comuna (condiciones y recomendaciones por clima)
+    # Clima por comuna (condiciones y recomendaciones por clima): el pronóstico del día que se predice o, sin
+    # pronóstico, el último observado (igual que comunas.json, firecal.export.comunas.fecha_clima_a_mostrar)
     ultimo = riesgo[riesgo["valido_para"] == riesgo["valido_para"].max()]
     fecha_dato = pd.Timestamp(ultimo["valido_para"].max()) - pd.Timedelta(days=1)  # último día con focos
-    fecha_clima = min(fecha_dato, pd.Timestamp(clima["fecha"].max())) if clima is not None else fecha_dato
+    fecha_clima, es_pronostico = fecha_clima_a_mostrar(clima, fecha_dato)
+    fecha_clima = fecha_clima or fecha_dato
     clima_region = clima[clima["region_id"].isin(codigos)] if clima is not None else None
     cond = condiciones_clima(clima_region, fecha_clima) if clima_region is not None else pd.DataFrame()
     cond_map = dict(zip(cond["region_id"], cond["condiciones"])) if len(cond) else {}
@@ -141,7 +146,7 @@ def main() -> int:
     for c in comunas:
         dias_c = dia_foco[focos["region_id"].astype(str) == c["region_id"]]
         c.update(motivos_comuna(dias_c, fecha_dato, mes_obj, cond_map.get(c["region_id"], []), textos_cond,
-                                INICIO_DATOS))
+                                INICIO_DATOS, ETIQUETA_CLIMA[es_pronostico]))
 
     # Caso histórico con las mismas reglas: lista de la víspera (24 h) y qué pasó ese día
     caso_dia = pd.Timestamp(CASO_FECHA)

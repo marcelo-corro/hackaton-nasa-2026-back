@@ -199,7 +199,10 @@ def condiciones_clima(clima: pd.DataFrame, fecha: pd.Timestamp) -> pd.DataFrame:
     (calor: tmax >= p90; aire seco: hrmin <= p10; viento: viento_max >= p90; sin lluvia: días sin lluvia >= p90).
     Todo contra el mismo mes, porque en verano casi todo Chile central pasa semanas sin llover. Suma las marcas de
     los umbrales de la DMC (>30 °C, <30 % de humedad, >30 km/h) y `condicion_30_30_30` si se cumplen los tres.
-    `viento_max` viene en m/s (NASA POWER); se publica también en km/h.
+    `viento_max` viene en m/s (NASA POWER); se publica también en km/h. Si `clima` trae la columna `pronostico`
+    (NASA POWER + Open-Meteo, ver bloque_clima), cada fila dice si el día es pronóstico y de qué fuente viene; el
+    percentil se calcula igual contra la historia de NASA POWER (Open-Meteo da ~1,6 °C menos de máxima y más humedad,
+    así que con pronóstico las marcas relativas son algo conservadoras).
     """
     c = clima.copy()
     c["mes"] = c["fecha"].dt.month
@@ -221,8 +224,10 @@ def condiciones_clima(clima: pd.DataFrame, fecha: pd.Timestamp) -> pd.DataFrame:
         condiciones = [k for k, ok in (relativas | dmc).items() if ok]
         if all(dmc.values()):
             condiciones.append("condicion_30_30_30")
+        es_pronostico = bool(getattr(r, "pronostico", False))
         filas.append({
             "region_id": r.region_id, "fecha_clima": fecha.strftime("%Y-%m-%d"),
+            "pronostico": es_pronostico, "fuente": "Open-Meteo" if es_pronostico else "NASA POWER",
             "tmax": round(float(r.tmax), 1), "tmax_percentil": round(p_t),
             "hrmin": round(float(r.hrmin), 0), "hrmin_percentil": round(p_h),
             "viento_max": round(float(r.viento_max), 1), "viento_max_kmh": round(kmh, 1), "viento_percentil": round(p_v),

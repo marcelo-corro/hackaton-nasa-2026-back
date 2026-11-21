@@ -95,3 +95,26 @@ def test_variables_futuro() -> None:
     assert f.loc["2026-11-10", "tmax_f2"] == 26.0  # máximo de t+1 y t+2
     assert f.loc["2026-11-10", "precip_f2"] == pytest.approx(1.0)
     assert np.isnan(f.loc["2026-11-13", "tmax_f2"])  # no hay t+2 (el 15)
+
+
+def test_fecha_clima_a_mostrar_prefiere_el_dia_pronosticado() -> None:
+    from firecal.export.comunas import fecha_clima_a_mostrar
+
+    c = combinar_con_pronostico(_power(), _pronostico())  # POWER hasta el 10, pronóstico hasta el 14
+    assert fecha_clima_a_mostrar(c, pd.Timestamp("2026-11-12")) == (pd.Timestamp("2026-11-13"), True)
+    # Sin pronóstico para el día que se predice: el último observado, como antes
+    assert fecha_clima_a_mostrar(_power().assign(pronostico=False), pd.Timestamp("2026-11-12")) == (
+        pd.Timestamp("2026-11-10"), False)
+    assert fecha_clima_a_mostrar(None, pd.Timestamp("2026-11-12")) == (None, False)
+
+
+def test_condiciones_clima_dice_si_es_pronostico(tmp_path) -> None:
+    from firecal.sectores.recomendaciones import condiciones_clima
+
+    ruta = tmp_path / "clima.parquet"
+    _power().rename(columns={"fecha": "fecha_local"}).to_parquet(ruta)
+    c = bloque_clima(ruta, _pronostico())
+    pron = condiciones_clima(c, pd.Timestamp("2026-11-13")).iloc[0]
+    obs = condiciones_clima(c, pd.Timestamp("2026-11-08")).iloc[0]
+    assert pron["pronostico"] and pron["fuente"] == "Open-Meteo"
+    assert not obs["pronostico"] and obs["fuente"] == "NASA POWER"

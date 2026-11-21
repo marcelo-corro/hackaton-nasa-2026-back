@@ -382,5 +382,11 @@ En cada elemento de `comunas[]`:
 - `motivos`: hechos verificables que acompañan el nivel (no son el peso de cada variable en el modelo). Los focos no
   incluyen las fuentes fijas que se repiten año tras año (industria, minería, volcanes; ver
   [docs/fuentes_persistentes.md](../docs/fuentes_persistentes.md)); lo dice `nota`.
+- Clima (aditivo, 21-11-2026): si hay pronóstico de Open-Meteo, `clima_ultimo_dia` es el del **día que se predice**
+  (`fecha_clima` = `valido_para`) con `"pronostico": true, "fuente": "Open-Meteo"`, y las condiciones, recomendaciones
+  y motivos ("Clima pronosticado: ...") salen de ese día; el archivo suma `"clima_pronostico": true`. Sin pronóstico,
+  como antes (`"pronostico": false, "fuente": "NASA POWER"`, último día observado). Los percentiles se comparan con la
+  historia de NASA POWER (Open-Meteo da ~1,6 °C menos de máxima y más humedad: las marcas relativas son conservadoras).
+  Mostrar "Open-Meteo.com" con enlace a https://open-meteo.com/ cuando `pronostico` es true.
 - `fuego_activo` marca toda comuna con algún foco en los 3 días; `avance/activos.json` ubica cada incendio en la comuna
   de su centro, por eso puede haber una comuna con fuego activo sin incendio propio en ese archivo.

@@ -28,7 +28,7 @@ sys.path.insert(0, str(RAIZ / "src"))
 sys.stdout.reconfigure(encoding="utf-8")
 from firecal import config  # noqa: E402
 from firecal.contratos import validar_riesgo  # noqa: E402
-from firecal.export.comunas import ARCHIVO_COMUNAS, INICIO_DATOS, comunas_pais  # noqa: E402
+from firecal.export.comunas import ARCHIVO_COMUNAS, INICIO_DATOS, comunas_pais, fecha_clima_a_mostrar  # noqa: E402
 from firecal.export.contrato import VERSION_CONTRATO  # noqa: E402
 from firecal.model.variables import bloque_clima, completar_con_noaa20  # noqa: E402
 from firecal.sectores.historial import focos_con_evento  # noqa: E402
@@ -46,9 +46,12 @@ def main() -> int:
     ultimo = riesgo[riesgo["valido_para"] == riesgo["valido_para"].max()]
     fecha_dato = pd.Timestamp(ultimo["valido_para"].max()) - pd.Timedelta(days=1)  # último día con focos (igual que el paso 13)
 
-    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet")
-    fecha_clima = min(fecha_dato, pd.Timestamp(clima["fecha"].max())) if clima is not None else None
-    cond = condiciones_clima(clima, fecha_clima) if clima is not None else pd.DataFrame()
+    # Clima del día que se predice (pronóstico de Open-Meteo, paso 5e) o, sin pronóstico, el último observado
+    ruta_pron = config.INTERIM_DIR / "pronostico_diario.parquet"
+    pronostico = pd.read_parquet(ruta_pron) if ruta_pron.exists() else None
+    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet", pronostico)
+    fecha_clima, es_pronostico = fecha_clima_a_mostrar(clima, fecha_dato)
+    cond = condiciones_clima(clima, fecha_clima) if fecha_clima is not None else pd.DataFrame()
 
     comunas = gpd.read_parquet(config.INTERIM_DIR / "comunas.parquet")
     nombres = dict(zip(comunas["region_id"].astype(str), comunas["nombre"]))
@@ -72,7 +75,8 @@ def main() -> int:
     dias_fuego = {str(rid): g["fecha_local"].dt.normalize() for rid, g in ev.groupby(ev["region_id"].astype(str))}
 
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    datos = comunas_pais(riesgo, cond, nombres, regiones, dias_fuego, fecha_dato, fecha_clima, ahora)
+    datos = comunas_pais(riesgo, cond, nombres, regiones, dias_fuego, fecha_dato, fecha_clima, ahora,
+                         clima_pronostico=es_pronostico)
     ruta = publico / ARCHIVO_COMUNAS
     ruta.write_text(json.dumps(datos, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
@@ -83,7 +87,8 @@ def main() -> int:
 
     cs = datos["comunas"]
     con_rec = sum(1 for c in cs if c["recomendaciones"].get("24"))
-    print(f"{ARCHIVO_COMUNAS}: {len(cs)} comunas, clima del {datos['fecha_clima']}, "
+    print(f"{ARCHIVO_COMUNAS}: {len(cs)} comunas, clima {'pronosticado' if es_pronostico else 'observado'} del "
+          f"{datos['fecha_clima']}, "
           f"{sum(c['fuego_activo'] for c in cs)} con fuego activo, {sum(bool(c['clima_ultimo_dia'] and c['clima_ultimo_dia']['condiciones']) for c in cs)} "
           f"con alguna condición de clima, {con_rec} con recomendaciones a 24 h; {ruta.stat().st_size / 1024:.0f} KB")
     return 0

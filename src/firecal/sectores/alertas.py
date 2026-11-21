@@ -85,7 +85,8 @@ def armar_lista(sectores: pd.DataFrame, xy_sectores: np.ndarray, riesgo: pd.Data
 
 
 def motivos_comuna(dias_fuego: pd.Series, ultimo_dato: pd.Timestamp, mes_objetivo: int, condiciones: list[str],
-                   textos_condicion: dict[str, str], inicio_datos: pd.Timestamp) -> dict:
+                   textos_condicion: dict[str, str], inicio_datos: pd.Timestamp,
+                   etiqueta_clima: str = "Clima del último día") -> dict:
     """Hechos verificables que acompañan el nivel de una comuna (no son el peso de cada variable en el modelo).
 
     `dias_fuego`: fechas (normalizadas) con focos en la comuna, sin fuentes persistentes, hasta `ultimo_dato`.
@@ -106,7 +107,7 @@ def motivos_comuna(dias_fuego: pd.Series, ultimo_dato: pd.Timestamp, mes_objetiv
         motivos.append(f"Focos en la última semana ({len(ult7)} {'día' if len(ult7) == 1 else 'días'})")
     if condiciones:
         textos = [textos_condicion.get(c, c) for c in condiciones]
-        motivos.append("Clima del último día: " + ", ".join(t[:1].lower() + t[1:] for t in textos))
+        motivos.append(f"{etiqueta_clima}: " + ", ".join(t[:1].lower() + t[1:] for t in textos))
     if pct_mes is not None:
         motivos.append(f"En {MESES[mes_objetivo - 1]}, la comuna tuvo focos el {pct_mes:.0f} % de los días "
                        f"({inicio_datos.year}-{ultimo_dato.year})")
