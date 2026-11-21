@@ -8,7 +8,8 @@ viento se muestra SOLO con viento fuerte: ahí el avance siguió el viento el ~3
 publica un cono: con estos datos, la dirección se acierta poco (ver docs/avance_validacion.md).
 
 Entradas: focos_calidad.parquet, viento_diario.parquet (paso 5d), avance_params.json (paso 14), riesgo_horizontes.json
-(paso 8), sectores_05.parquet (para excluir fuentes industriales de la Región de Valparaíso).
+(paso 8), sectores_05.parquet (fuentes persistentes del piloto de Valparaíso; las del resto del país ya vienen
+fuera de `uso_base`, ver firecal.fuentes_persistentes).
 
 Uso:
     python scripts/15_exportar_avance.py
@@ -89,8 +90,9 @@ def main() -> int:
                  f"{coma(params['radios_km']['p90'])} km el {params['cobertura_prueba_pct']['p90']:.0f} %. Flecha de viento "
                  f"solo con viento fuerte (desde {coma(params['viento_fuerte_desde_ms'])} m/s): ahí el avance siguió el "
                  f"viento el {params['acierto_45_viento_fuerte_prueba_pct']:.0f} % de las veces (al azar, 25 %). No es un "
-                 "cono: con estos datos la dirección se acierta poco. Fuera de la Región de Valparaíso puede quedar "
-                 "alguna fuente industrial no marcada por FIRMS."),
+                 "cono: con estos datos la dirección se acierta poco. No incluye las fuentes fijas que se repiten año "
+                 "tras año (industria, minería, volcanes); una fuente nueva puede aparecer hasta que se actualice esa "
+                 "lista."),
         "validacion": {"radios_km": params["radios_km"], "cobertura_prueba_pct": params["cobertura_prueba_pct"],
                        "viento_fuerte_desde_ms": params["viento_fuerte_desde_ms"],
                        "acierto_45_viento_fuerte_prueba_pct": params["acierto_45_viento_fuerte_prueba_pct"],

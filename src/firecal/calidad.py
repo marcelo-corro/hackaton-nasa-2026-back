@@ -11,7 +11,10 @@
     frp_valido        bool      frp > 0 (sin esto el foco sirve para contar, no para medir intensidad)
     pixel_grande      bool      área del píxel > 2 veces la de nadir (borde del barrido: el mismo incendio
                                 puede contarse más de una vez y la detección es menos sensible)
-    uso_base          bool      es_vegetacion & confianza_ok: regla por defecto para contar focos
+    fuente_persistente bool     cae en una fuente fija que FIRMS no marca (industria, minería, volcán, relleno),
+                                según la máscara de firecal.fuentes_persistentes
+    uso_base          bool      es_vegetacion & confianza_ok & no fuente_persistente: regla por defecto para contar
+                                focos
 
 Los filtros se aplican después, en cada análisis, y se prueba cuánto cambia el resultado con cada uno.
 `reporte_calidad` arma un resumen en Markdown con las cifras que justifican estas marcas.
@@ -24,6 +27,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 
+from firecal.fuentes_persistentes import en_fuente_persistente
 from firecal.reportes import tabla_md
 
 AREA_NADIR_KM2 = {"MODIS": 1.0, "VIIRS": 0.375 * 0.375}
@@ -32,7 +36,7 @@ LON_LIMITE_ISLA_DE_PASCUA = -100.0  # al oeste de esto, zona horaria de Isla de 
 ZONA_CONTINENTAL = "America/Santiago"
 ZONA_PASCUA = "Pacific/Easter"
 
-MARCAS = ["es_vegetacion", "confianza_ok", "frp_valido", "pixel_grande", "uso_base"]
+MARCAS = ["es_vegetacion", "confianza_ok", "frp_valido", "pixel_grande", "fuente_persistente", "uso_base"]
 
 
 def _fecha_hora_utc(focos: pd.DataFrame) -> pd.Series:
@@ -40,8 +44,12 @@ def _fecha_hora_utc(focos: pd.DataFrame) -> pd.Series:
     return (focos["fecha"] + pd.to_timedelta(minutos, unit="m")).dt.tz_localize("UTC")
 
 
-def marcar_calidad(focos: pd.DataFrame) -> pd.DataFrame:
-    """Devuelve una copia de `focos` con las columnas de calidad descritas en el módulo."""
+def marcar_calidad(focos: pd.DataFrame, fuentes_persistentes: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Devuelve una copia de `focos` con las columnas de calidad descritas en el módulo.
+
+    `fuentes_persistentes`: máscara de celdas (firecal.fuentes_persistentes.leer_mascara); sin ella ningún foco se
+    marca como fuente persistente.
+    """
     utc = _fecha_hora_utc(focos)
     pascua = focos["lon"] < LON_LIMITE_ISLA_DE_PASCUA
 
@@ -60,7 +68,9 @@ def marcar_calidad(focos: pd.DataFrame) -> pd.DataFrame:
     salida["confianza_ok"] = focos["confianza"].isin(["nominal", "alta"]).fillna(False).astype(bool)
     salida["frp_valido"] = focos["frp"].gt(0).fillna(False).astype(bool)
     salida["pixel_grande"] = (focos["area_pixel_km2"] > FACTOR_PIXEL_GRANDE * area_nadir).fillna(False).astype(bool)
-    salida["uso_base"] = salida["es_vegetacion"] & salida["confianza_ok"]
+    # Solo los que FIRMS marcó como vegetación: los demás ya quedaban fuera por su `tipo`.
+    salida["fuente_persistente"] = en_fuente_persistente(focos, fuentes_persistentes).astype(bool) & salida["es_vegetacion"]
+    salida["uso_base"] = salida["es_vegetacion"] & salida["confianza_ok"] & ~salida["fuente_persistente"]
     return salida
 
 

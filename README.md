@@ -35,6 +35,7 @@ cp .env.example .env
 .venv/Scripts/python scripts/02_ingestar_firms.py
 .venv/Scripts/python scripts/01b_firms_reciente.py     # focos del año en curso por la API (MAP_KEY en .env); luego 02-04
 .venv/Scripts/python scripts/03_asignar_comunas.py     # ~1 min la primera vez
+.venv/Scripts/python scripts/04b_fuentes_persistentes.py  # (una vez al año) máscara de fuentes fijas + docs/fuentes_persistentes.md
 .venv/Scripts/python scripts/04_marcar_calidad.py      # marcas de calidad + docs/calidad_datos.md
 .venv/Scripts/python scripts/05_armonizar.py           # serie armonizada + docs/armonizacion.md
 .venv/Scripts/python scripts/05b_clima_diario.py       # clima NASA POWER por comuna (opcional; 345 consultas, retoma si se corta)
@@ -113,13 +114,14 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 1. Descargar y verificar datos públicos | `scripts/01_descargar_datos.py` | — | Listo |
 | 2. Unir CSV de FIRMS en una tabla | `scripts/02_ingestar_firms.py`, `firecal.ingest.firms` | — | Listo (821.539 focos) |
 | 3. Asignar focos a comunas | `scripts/03_asignar_comunas.py`, `firecal.ingest.comunas` | — | Listo (99,998 % de los focos de vegetación) |
+| 4b. Fuentes persistentes (industria, minería, volcanes) | `scripts/04b_fuentes_persistentes.py`, `firecal.fuentes_persistentes` → `ref/fuentes_persistentes.csv` | — | Listo (21-11-2026): 470 celdas de 1 km, 3,2 % de las detecciones Suomi NPP 2012-2025 ([reporte](docs/fuentes_persistentes.md)). No corre a diario: repetir una vez al año |
 | 4. Marcar calidad + fecha local | `scripts/04_marcar_calidad.py`, `firecal.calidad` | — | Listo ([reporte](docs/calidad_datos.md)) |
 | 5p. Serie mensual provisional | `scripts/05p_serie_provisional.py` | B | Ya no hace falta (la serie armonizada existe) |
 | 5. Armonización MODIS ↔ VIIRS | `scripts/05_armonizar.py`, `firecal.harmonize` | A | Listo ([reporte](docs/armonizacion.md)) |
 | 5b. Clima diario por comuna (NASA POWER) | `scripts/05b_clima_diario.py`, `firecal.ingest.clima` | B | Listo (PR #2) |
 | 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Listo ([reporte](docs/eventos.md)) |
 | 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Listo (PR #1) |
-| 8. Riesgo 24 h, 48 h y 7 días | `scripts/08_riesgo.py`, `firecal.model` | A | Listo: `hgb_firms_clima_v3` (14 variables, sin fuga), 24 h AUC 0,846 y precisión media 0,282 en 2022-2025; 7 días orientativo ([reporte](docs/riesgo.md)) |
+| 8. Riesgo 24 h, 48 h y 7 días | `scripts/08_riesgo.py`, `firecal.model` | A | Listo: `hgb_firms_clima_v3` (14 variables, sin fuga), 24 h AUC 0,847 y precisión media 0,283 en 2022-2025 (sin fuentes persistentes, 21-11); 7 días orientativo ([reporte](docs/riesgo.md)) |
 | 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Listo (PR #1); la portada `index.html` va en el PR #3 |
 | 10. Publicar en GitHub Pages | `scripts/10_publicar.py`, `firecal.export.publicar` | B | Listo (PR #1); datos reales publicados el 14-11 |
 | 11-13. Sectores (piloto Región de Valparaíso) | `scripts/11_descargar_capas.py`, `12_sectores.py`, `12b_validar_sectores.py`, `12c_modelo_sectores.py`, `13_exportar_sectores.py`; `firecal.sectores` | A | Listo: 17.953 sectores de 1 km con historial, vegetación, interfaz, pendiente y caminos; prioridad validada (29 % del fuego en el 10 % de sectores, azar 10 %); modelo B por sector (45 % en prueba) e incendio grande (AUC 0,87) ([reporte](docs/sectores.md)). `13` va después de `09` |
@@ -130,11 +132,14 @@ Las tablas que se pasan entre pasos y sus validadores (`firecal.contratos`) est�
 ### Calidad de los datos
 
 El paso 4 **no borra focos: los marca** (`es_vegetacion`, `confianza_ok`, `frp_valido`, `pixel_grande`,
-`uso_base`) y agrega `fecha_local` en hora de Chile. Cada análisis filtra con reglas escritas y prueba cuánto
-cambia el resultado con y sin cada filtro. Regla por defecto para contar focos: `uso_base` (vegetación y
-confianza nominal o alta). Lo que muestra el [reporte de calidad](docs/calidad_datos.md):
+`fuente_persistente`, `uso_base`) y agrega `fecha_local` en hora de Chile. Cada análisis filtra con reglas escritas y
+prueba cuánto cambia el resultado con y sin cada filtro. Regla por defecto para contar focos: `uso_base` (vegetación,
+confianza nominal o alta y fuera de las fuentes persistentes). Lo que muestra el [reporte de calidad](docs/calidad_datos.md):
 
-- ~19 % de los focos no son vegetación (industria, faenas, volcanes): se excluyen del conteo.
+- ~19 % de los focos no son vegetación según FIRMS (industria, faenas, volcanes): se excluyen del conteo.
+- Otro ~3 % son fuentes fijas que FIRMS no marca (refinerías, fundiciones, faenas mineras del desierto, rellenos,
+  volcanes): se repiten año tras año en el mismo kilómetro, sin vegetación o de noche y sin propagarse. También se
+  excluyen ([detalle](docs/fuentes_persistentes.md)); por ejemplo, en Copiapó eran más de la mitad de los días con focos.
 - Las órbitas de Terra y Aqua (MODIS) se desvían ~1 h desde 2020-2022; las de VIIRS no. Por eso la razón
   VIIRS/MODIS cambia con los años: **un factor calibrado con todo el período no sirve**. La armonización calibra
   solo con 2012-2017 (MODIS estable) y desde 2018 usa VIIRS convertido ([detalle](docs/armonizacion.md)).

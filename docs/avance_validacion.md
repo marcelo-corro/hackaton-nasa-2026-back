@@ -1,5 +1,5 @@
 # Validación de la dirección de avance (cono)
-_Generado por `scripts/14_validar_avance.py` el 2026-11-15 06:09 UTC. No editar a mano._
+_Generado por `scripts/14_validar_avance.py` el 2026-11-21 16:37 UTC. No editar a mano._
 
 6.674 avances día a día de incendios en Chile (frente nuevo del día siguiente a más de 0.75 km). Al azar. el 25 % cae a ±45° y el 50 % a ±90°; error mediano al azar: 90°.
 

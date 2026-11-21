@@ -2,6 +2,26 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-21: fuentes persistentes fuera del conteo en todo Chile
+
+- **Problema:** refinerías, fundiciones, faenas mineras, rellenos y volcanes que FIRMS no marca se contaban como
+  incendios. Lo «normal» de noviembre en Copiapó era 16,9 % de los días con focos y salía en riesgo alto casi siempre;
+  la regla de fuentes persistentes de los sectores (`firecal.sectores.historial`) solo corría en Valparaíso y, como es
+  nocturna, no veía las fuentes diurnas del desierto.
+- **Medición:** de 156 celdas de 1 km del norte con fuego repetido (>= 10 días de >= 5 años), 149 tienen < 10 % de
+  vegetación en ESA WorldCover; en el sur, 7 de 865 (volcanes). La regla nocturna sola marcaba refinerías y fundiciones
+  (Concón 95 % de sus días con focos, Quintero 81 %), pero dejaba Copiapó en 13 %.
+- **Regla adoptada** (`firecal.fuentes_persistentes`, paso 4b): fuego repetido y (sin vegetación < 10 % o nocturna
+  >= 60 % que no se propaga: nunca en un incendio de > 10 focos o de más de 2 km), en dos grillas (0 y 500 m). 470
+  celdas; 3,2 % de las detecciones Suomi NPP 2012-2025; 5,8 % de los días-comuna con focos. Sale de `uso_base`, así que
+  afecta serie, calendario, riesgo, incendios activos y lo «normal». Las comunas forestales y el altiplano no cambian
+  (Collipulli 0,4 %; Curicó, Ovalle, Los Ángeles, Linares, Putre 0 %).
+- **Modelo de riesgo reentrenado** (prueba 2022-2025): 24 h AUC 0,845 → 0,847, precisión media 0,282 → 0,283, captura
+  del 10 % superior 52,0 → 52,9 %; 48 h igual o mejor; 7 días precisión media 0,490 → 0,470 con tasa base 16,3 → 15,2 %
+  (ventaja sobre la climatología ×1,10 → ×1,09). Serie armonizada casi igual (razón global SNPP/Aqua 3,184 → 3,183).
+- **La máscara se versiona** (`ref/fuentes_persistentes.csv`, ~470 filas, derivada de datos públicos): el paso diario
+  no vuelve a leer WorldCover. Repetir el paso 4b una vez al año. Detalle: [fuentes_persistentes.md](fuentes_persistentes.md).
+
 ## 2026-11-15: zona probable de avance (no cono)
 
 - **Se midió si se puede anticipar hacia dónde avanza un incendio** (`14_validar_avance.py`, 6.674 avances día a día en

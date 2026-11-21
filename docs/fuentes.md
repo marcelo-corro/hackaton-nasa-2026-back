@@ -121,7 +121,7 @@ Solo los bloques que tocan las 36 comunas continentales de la región.
 
 | Capa | Qué es | URL | Licencia / condición |
 |---|---|---|---|
-| ESA WorldCover 2021 v200 | Cobertura del suelo a 10 m, 11 clases (árboles, matorral, pastizal, cultivo, construido...). No separa bosque nativo de plantación | `https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/` (bloques S36W072 y S33W072) | CC BY 4.0 |
+| ESA WorldCover 2021 v200 | Cobertura del suelo a 10 m, 11 clases (árboles, matorral, pastizal, cultivo, construido...). No separa bosque nativo de plantación. Desde el 21-11-2026 también se lee en todo Chile, solo en ventanas de 1,5 km alrededor de los lugares con focos repetidos, para marcar fuentes persistentes sin vegetación (`scripts/04b_fuentes_persistentes.py`, [detalle](fuentes_persistentes.md)) | `https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/` (bloques S36W072 y S33W072; para las fuentes persistentes, los bloques de Chile por rango HTTP) | CC BY 4.0 |
 | Copernicus DEM GLO-30 | Elevación a 30 m (para la pendiente) | `https://copernicus-dem-30m.s3.amazonaws.com/` (6 bloques de 1°) | Licencia Copernicus DEM: uso libre con la atribución de abajo |
 | WUI global (Schug et al. 2023) v1.1 | Interfaz urbano-forestal a 10 m, ~2020, 8 clases (1-4 WUI) | `https://zenodo.org/records/7941460` (zip `SA.zip`; se leyeron solo 9 bloques por rango HTTP, 12 MB de 1,7 GB) | CC BY 4.0 |
 | OpenStreetMap (caminos) | 66.243 vías de la Región de Valparaíso (autopista a huella rural), datos al 15-11-2026, para el modelo B | Overpass API `https://overpass-api.de/api/interpreter`, por límite administrativo `ISO3166-2=CL-VS` (consulta exacta en el registro) | ODbL: citar "© colaboradores de OpenStreetMap" |

@@ -6,7 +6,8 @@ Lleva a todo el país el bloque `comunas` que hasta la v0.7 solo tenía el pilot
 las mismas reglas (ver firecal.export.comunas). No hay sectores fuera del piloto.
 
 Entradas: riesgo.parquet y riesgo_horizontes.json (paso 8), clima_diario.parquet (paso 5c), focos_calidad.parquet
-(paso 4), comunas.parquet y sectores_05.parquet (para excluir las fuentes industriales del piloto de Valparaíso).
+(paso 4), comunas.parquet y sectores_05.parquet (fuentes persistentes del piloto de Valparaíso; las del resto del
+país ya vienen fuera de `uso_base`, ver firecal.fuentes_persistentes).
 
 Uso:
     python scripts/16_exportar_comunas.py

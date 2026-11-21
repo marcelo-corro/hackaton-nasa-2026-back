@@ -375,7 +375,8 @@ En cada elemento de `comunas[]`:
 - `recomendaciones[h]`: códigos de `recomendaciones.json` para el horizonte `h`, por el clima del último día y, si el
   nivel de la comuna es alto o muy alto, "avisar al 130". La restricción de quemas solo se nombra en la región que la
   tiene (05); en el resto, el calendario de quemas de CONAF. Lista vacía si no corresponde ninguna (no se inventan).
-- `motivos`: hechos verificables que acompañan el nivel (no son el peso de cada variable en el modelo). Fuera de
-  Valparaíso los focos pueden incluir alguna fuente industrial no marcada por FIRMS (lo dice `nota`).
+- `motivos`: hechos verificables que acompañan el nivel (no son el peso de cada variable en el modelo). Los focos no
+  incluyen las fuentes fijas que se repiten año tras año (industria, minería, volcanes; ver
+  [docs/fuentes_persistentes.md](../docs/fuentes_persistentes.md)); lo dice `nota`.
 - `fuego_activo` marca toda comuna con algún foco en los 3 días; `avance/activos.json` ubica cada incendio en la comuna
   de su centro, por eso puede haber una comuna con fuego activo sin incendio propio en ese archivo.

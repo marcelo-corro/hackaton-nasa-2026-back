@@ -35,7 +35,7 @@ sin focos va con 0, no se omite.
 | `armonizado_p05`, `armonizado_p95` | float | intervalo de incertidumbre; puede ser nulo en la versión provisional |
 | `metodo` | string | un solo valor para toda la tabla: `provisional_factor_unico` (B) o el nombre del método de A |
 
-`uso_base` = vegetación (`tipo == 0`) y confianza nominal o alta. Ver [docs/calidad_datos.md](../docs/calidad_datos.md).
+`uso_base` = vegetación (`tipo == 0`), confianza nominal o alta y fuera de las fuentes persistentes (desde el 21-11-2026; ver [docs/fuentes_persistentes.md](../docs/fuentes_persistentes.md)). Ver [docs/calidad_datos.md](../docs/calidad_datos.md).
 
 ## calendario.parquet
 

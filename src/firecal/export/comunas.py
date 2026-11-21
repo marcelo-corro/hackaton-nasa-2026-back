@@ -25,8 +25,8 @@ ARCHIVO_COMUNAS = "comunas.json"
 INICIO_DATOS = pd.Timestamp("2012-02-01")  # primer día con VIIRS Suomi NPP en la serie (igual que el paso 13)
 NOTA_COMUNAS = ("Clima observado del último día con datos (NASA POWER) y hechos que acompañan el nivel de cada comuna; "
                 "no son el peso de cada variable en el modelo. Las recomendaciones dependen del clima de ese día y del "
-                "nivel de la comuna en cada horizonte. Fuera de la Región de Valparaíso los focos pueden incluir alguna "
-                "fuente industrial no marcada por FIRMS.")
+                "nivel de la comuna en cada horizonte. Los focos no incluyen las fuentes fijas que se repiten año tras "
+                "año (industria, minería, volcanes); una fuente nueva puede aparecer hasta que se actualice esa lista.")
 
 
 def comunas_pais(riesgo: pd.DataFrame, condiciones: pd.DataFrame, nombres: dict[str, str], regiones: dict[str, str],
