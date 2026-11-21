@@ -330,6 +330,10 @@ En cada elemento de `comunas[]`:
 - `nota`: texto listo para mostrar junto a la fecha ("de qué fecha son los datos"). Mostrarlo siempre.
 - `prueba_nueva`: cómo le fue al modelo en 2026, con datos que no existían cuando se eligió (para Metodología/pitch).
   Los valores del ejemplo son ilustrativos: usar los del archivo.
+- `pronostico` (aditivo, 21-11-2026): `{"fuente": "Open-Meteo", "desde": "YYYY-MM-DD", "hasta": "YYYY-MM-DD",
+  "emitido_utc": "..."}` cuando el riesgo usa el pronóstico de Open-Meteo (relleno del rezago de NASA POWER y clima de
+  los días que se predicen); `null` si ese día no hubo pronóstico. Si se muestra, citar "Weather data by
+  Open-Meteo.com" con enlace a https://open-meteo.com/ (CC BY 4.0).
 
 ---
 

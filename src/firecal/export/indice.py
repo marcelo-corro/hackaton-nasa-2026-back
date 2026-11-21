@@ -127,6 +127,15 @@ def index_html(manifest: dict, riesgo: dict | None = None, metricas: dict | None
         if modelo_usa_clima(riesgo, metricas)
         else ""
     )
+    # Desde el modelo v4 el riesgo publicado usa el pronóstico de Open-Meteo (CC BY 4.0: pide enlace visible).
+    usa_pronostico = "pronostico" in str((riesgo or {}).get("modelo") or (metricas or {}).get("modelo") or "")
+    cita_pronostico = (
+        '<li><strong>Open-Meteo</strong> (pronóstico del tiempo: rellena los días que NASA POWER aún no publica y da el '
+        'clima de los días que se predicen). <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> '
+        "(CC BY 4.0).</li>"
+        if usa_pronostico
+        else ""
+    )
     # Sin métricas publicadas (modelo aún sin validar) se dice así; con métricas, va su nota tal cual.
     if not metricas or metricas.get("auc") is None:
         nota_modelo = TEXTO_SIN_METRICAS
@@ -178,6 +187,7 @@ Las cifras armonizadas están en <em>focos equivalentes MODIS</em>.</p>
 </ul></li>
 <li><strong>Biblioteca del Congreso Nacional de Chile (BCN)</strong> (límites comunales). {escape(BCN_CITA)}</li>
 {cita_power}
+{cita_pronostico}
 </ul>
 
 <h2>Límites</h2>

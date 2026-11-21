@@ -2,6 +2,23 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-21: pronóstico del tiempo (Open-Meteo) en el riesgo publicado (modelo v4)
+
+- **Problema:** NASA POWER llega con ~4 días de rezago y no tiene los días que se predicen. Al publicar se repetía el
+  último clima disponible: en las 80 comunas con más fuego (2024-2025) la precisión media a 24 h de lo publicado era
+  0,248, contra 0,308 con el clima del día.
+- **Cota medida primero** (prueba 2022-2025, todas las comunas): con el clima real de los días que se predicen la
+  precisión media sube 0,283 → 0,313 a 24 h, 0,322 → 0,353 a 48 h y solo 0,470 → 0,490 a 7 días (ventaja sobre la
+  climatología ×1,09 → ×1,14). **A 7 días no se usa pronóstico.**
+- **Con pronósticos reales** (Open-Meteo, archivo por plazo desde 2024; `08b_validar_pronostico.py`,
+  [detalle](pronostico_validacion.md)): 24 h 0,248 → 0,297 rellenando el rezago → **0,318** con el pronóstico de t+1;
+  48 h 0,315 → 0,358 → **0,389**. El modelo entrenado con POWER funciona casi igual con Open-Meteo (sin corrección de
+  sesgos).
+- **Adoptado:** paso 5e diario (Open-Meteo, mismo punto por comuna que POWER, hasta 50 comunas por petición) y modelo
+  v4 con el clima de t+1 (24 h) y de t+1 y t+2 (48 h); al entrenar, el observado. Si Open-Meteo falla, todo vuelve a v3
+  ese día. NASA POWER sigue siendo el clima histórico. Fuente y licencia (CC BY 4.0, enlace visible) en
+  [fuentes.md](fuentes.md).
+
 ## 2026-11-21: fuentes persistentes fuera del conteo en todo Chile
 
 - **Problema:** refinerías, fundiciones, faenas mineras, rellenos y volcanes que FIRMS no marca se contaban como

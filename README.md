@@ -41,10 +41,12 @@ cp .env.example .env
 .venv/Scripts/python scripts/05b_clima_diario.py       # clima NASA POWER por comuna (opcional; 345 consultas, retoma si se corta)
 .venv/Scripts/python scripts/05c_clima_reciente.py     # clima del año en curso (NASA POWER), se suma a clima_diario.parquet
 .venv/Scripts/python scripts/05d_viento_power.py       # dirección y velocidad del viento (NASA POWER) para la zona de avance
+.venv/Scripts/python scripts/05e_pronostico.py         # pronóstico de Open-Meteo: rellena el rezago de NASA POWER y los días que se predicen
 .venv/Scripts/python scripts/14_validar_avance.py      # valida la dirección de avance + docs/avance_validacion.md
 .venv/Scripts/python scripts/06_eventos.py             # focos vs incendios + docs/eventos.md (opcional)
 .venv/Scripts/python scripts/07_calendario.py          # calendario con mediana, percentil y nivel
 .venv/Scripts/python scripts/08_riesgo.py              # modelo de riesgo + docs/riesgo.md (~1,5 min; usa el clima si existe)
+.venv/Scripts/python scripts/08b_validar_pronostico.py # (opcional) riesgo con pronósticos reales archivados + docs/pronostico_validacion.md
 .venv/Scripts/python scripts/11_descargar_capas.py     # capas del piloto de sectores (~480 MB, una vez)
 .venv/Scripts/python scripts/12_sectores.py            # sectores de 1 km de la Región de Valparaíso (~40 s)
 .venv/Scripts/python scripts/12b_validar_sectores.py   # validación de la prioridad + docs/sectores_validacion.md
@@ -121,7 +123,8 @@ A = back, ciencia de datos · B = back, producto de datos (ver [roles](docs/trab
 | 5b. Clima diario por comuna (NASA POWER) | `scripts/05b_clima_diario.py`, `firecal.ingest.clima` | B | Listo (PR #2) |
 | 6. Agrupar focos en incendios | `scripts/06_eventos.py`, `firecal.events` | A | Listo ([reporte](docs/eventos.md)) |
 | 7. Calendario y anomalías | `scripts/07_calendario.py`, `firecal.anomalies` | B | Listo (PR #1) |
-| 8. Riesgo 24 h, 48 h y 7 días | `scripts/08_riesgo.py`, `firecal.model` | A | Listo: `hgb_firms_clima_v3` (14 variables, sin fuga), 24 h AUC 0,847 y precisión media 0,283 en 2022-2025 (sin fuentes persistentes, 21-11); 7 días orientativo ([reporte](docs/riesgo.md)) |
+| 5e. Pronóstico del tiempo (Open-Meteo) | `scripts/05e_pronostico.py`, `firecal.ingest.pronostico` | — | Listo (21-11-2026): diario; si falla, el riesgo sigue sin pronóstico |
+| 8. Riesgo 24 h, 48 h y 7 días | `scripts/08_riesgo.py`, `firecal.model` | A | Listo: `hgb_firms_clima_pronostico_v4` (v3 + clima de mañana y pasado mañana; 21-11-2026). Con pronósticos reales de Open-Meteo (2024-2025, 80 comunas con más fuego) la precisión media a 24 h de lo publicado pasa de 0,25 a 0,32 ([validación](docs/pronostico_validacion.md), `scripts/08b_validar_pronostico.py`); con el clima observado, 2022-2025: AUC 0,858 y precisión media 0,313. 7 días orientativo ([reporte](docs/riesgo.md)) |
 | 9. Exportar al contrato | `scripts/09_exportar.py`, `firecal.export` | B | Listo (PR #1); la portada `index.html` va en el PR #3 |
 | 10. Publicar en GitHub Pages | `scripts/10_publicar.py`, `firecal.export.publicar` | B | Listo (PR #1); datos reales publicados el 14-11 |
 | 11-13. Sectores (piloto Región de Valparaíso) | `scripts/11_descargar_capas.py`, `12_sectores.py`, `12b_validar_sectores.py`, `12c_modelo_sectores.py`, `13_exportar_sectores.py`; `firecal.sectores` | A | Listo: 17.953 sectores de 1 km con historial, vegetación, interfaz, pendiente y caminos; prioridad validada (29 % del fuego en el 10 % de sectores, azar 10 %); modelo B por sector (45 % en prueba) e incendio grande (AUC 0,87) ([reporte](docs/sectores.md)). `13` va después de `09` |

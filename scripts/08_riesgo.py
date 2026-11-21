@@ -45,13 +45,29 @@ from firecal import config  # noqa: E402
 from firecal.contratos import validar_riesgo  # noqa: E402
 from firecal.model.evaluar import confiabilidad, curva_captura, metricas, por_segmento  # noqa: E402
 from firecal.model.variables import (  # noqa: E402
-    VARIABLES_CLIMATOLOGIA, VARIABLES_MODELO_CLIMA, VARIABLES_MODELO_FIRMS, agregar_climatologia, bloque_clima,
-    completar_con_noaa20, extender_clima, tabla_base,
+    VARIABLES_CLIMATOLOGIA, VARIABLES_MODELO_CLIMA, VARIABLES_MODELO_FIRMS, VARIABLES_PRONOSTICO, agregar_climatologia,
+    bloque_clima, completar_con_noaa20, extender_clima, tabla_base, variables_futuro,
 )
 from firecal.reportes import tabla_md  # noqa: E402
 
 INICIO = "2012-02-01"  # el fin sale de los datos: último día con focos y con clima (ver main)
 FIN_ENTRENAMIENTO, FIN_CALIBRACION, FIN_PRUEBA = "2019-12-31", "2021-12-31", "2025-12-31"
+# Validación con pronósticos REALES de Open-Meteo (scripts/08b_validar_pronostico.py; versionada en ref/). La prueba de
+# este script usa el clima OBSERVADO de los días que se predicen (cota superior); esa validación dice cuánto queda con
+# el pronóstico de verdad.
+RUTA_VALIDACION_PRONOSTICO = config.RAIZ / "ref" / "validacion_pronostico.json"
+VALIDACION_PRONOSTICO = (json.loads(RUTA_VALIDACION_PRONOSTICO.read_text(encoding="utf-8"))
+                         if RUTA_VALIDACION_PRONOSTICO.exists() else None)
+
+
+def texto_validacion_pronostico(v: dict | None) -> str:
+    """Una frase con la precisión media a 24 h con el pronóstico real y como se publicaba antes."""
+    if not v:
+        return ""
+    h = v["horizontes"]["24"]
+    return (f" Con el clima observado del día que predice; con el pronóstico real de Open-Meteo ({v['periodo']}, "
+            f"{v['comunas']} comunas con más fuego) la precisión media a 24 h fue {h['con_pronostico']['precision_media']:.2f}"
+            f" (antes, con el clima de hace 4 días, {h['como_antes']['precision_media']:.2f}).")
 # Después de FIN_PRUEBA: "prueba nueva" (2026), datos que no existían al construir ni al elegir el modelo.
 NIVELES = [(0.30, "muy_alto"), (0.12, "alto"), (0.04, "medio"), (0.0, "bajo")]
 CASO = {"05109": "Viña del Mar", "05801": "Quilpué", "05804": "Villa Alemana"}
@@ -96,7 +112,7 @@ def entrenar_horizonte(tabla: pd.DataFrame, objetivo: str, dias: int, cols: list
     clim = E.groupby(["region_id", "mes"])[objetivo].mean().rename("clim_h")
     clim_p = P[["region_id", "mes"]].join(clim, on=["region_id", "mes"])["clim_h"].fillna(E[objetivo].mean())
     p = iso.predict(m.predict_proba(P[cols])[:, 1])
-    return {"modelo": m, "calibrador": iso, "p_cal": iso.predict(m.predict_proba(C[cols])[:, 1]),
+    return {"modelo": m, "calibrador": iso, "p_cal": iso.predict(m.predict_proba(C[cols])[:, 1]), "cols": cols,
             "modelo_prueba": metricas(P[objetivo], p), "clim_prueba": metricas(P[objetivo], clim_p)}
 
 
@@ -182,15 +198,28 @@ def main() -> int:
     focos, ultimo_snpp = completar_con_noaa20(focos)
     comunas = gpd.read_parquet(config.INTERIM_DIR / "comunas.parquet")
     nombres = comunas.set_index("region_id")["nombre"]
-    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet")
+    # Pronóstico de Open-Meteo (paso 5e): rellena el rezago de NASA POWER y da el clima de los días que se predicen
+    ruta_pron = config.INTERIM_DIR / "pronostico_diario.parquet"
+    pronostico = pd.read_parquet(ruta_pron) if ruta_pron.exists() else None
+    clima = bloque_clima(config.INTERIM_DIR / "clima_diario.parquet", pronostico)
     fin = pd.Timestamp(focos["fecha_local"].max()).normalize()
-    clima_hasta, rezago_clima = None, 0
+    clima_hasta, rezago_clima, info_pron = None, 0, None
     if clima is not None:
-        clima_hasta = pd.Timestamp(clima["fecha"].max())
-        clima, rezago_clima = extender_clima(clima, fin)  # NASA POWER llega con días de retraso
+        de_power = ~clima["pronostico"] if "pronostico" in clima else pd.Series(True, index=clima.index)
+        clima_hasta = pd.Timestamp(clima.loc[de_power, "fecha"].max())
+        if (~de_power).any():
+            pr = clima.loc[~de_power, "fecha"]
+            info_pron = {"fuente": "Open-Meteo", "desde": pr.min().strftime("%Y-%m-%d"),
+                         "hasta": pr.max().strftime("%Y-%m-%d"),
+                         "emitido_utc": str(pronostico["emitido_utc"].iloc[0]) if "emitido_utc" in pronostico else None}
+        clima, rezago_clima = extender_clima(clima, fin)  # sin pronóstico, repite el último clima de NASA POWER
+    # El pronóstico sirve para el modelo si cubre los dos días que vienen (t+1 y t+2) en todas las comunas.
+    usar_pronostico = bool(info_pron) and pd.Timestamp(info_pron["hasta"]) >= fin + pd.Timedelta(days=2)
     FIN = fin.strftime("%Y-%m-%d")  # noqa: N806
     print(f"Último día con focos: {FIN} (Suomi NPP hasta {ultimo_snpp.date()}; después, NOAA-20 en su lugar); "
-          f"clima hasta {None if clima_hasta is None else clima_hasta.date()} (rezago {rezago_clima} días)")
+          f"clima de NASA POWER hasta {None if clima_hasta is None else clima_hasta.date()}; "
+          + (f"pronóstico de Open-Meteo {info_pron['desde']} a {info_pron['hasta']}" if info_pron
+             else f"sin pronóstico (se repite el último clima {rezago_clima} días)"))
 
     print("Armando tabla comuna x día...")
     tabla = tabla_base(focos, comunas, INICIO, FIN)
@@ -203,8 +232,12 @@ def main() -> int:
     variables = VARIABLES_MODELO_FIRMS + VARIABLES_CLIMATOLOGIA
     bloques = ["FIRMS"]
     if clima is not None:
-        tabla = tabla.merge(clima, on=["region_id", "fecha"], how="left")
+        tabla = tabla.merge(clima.drop(columns="pronostico", errors="ignore"), on=["region_id", "fecha"], how="left")
         bloques.append("clima")
+        if usar_pronostico:
+            # Clima de t+1 y t+2: observado (NASA POWER) en la historia, pronóstico de Open-Meteo en los últimos días
+            tabla = tabla.merge(variables_futuro(clima), on=["region_id", "fecha"], how="left")
+            bloques.append("pronostico")
     print(f"Bloques de variables: {', '.join(bloques)}")
 
     con_y = tabla["y24"].notna()
@@ -228,6 +261,9 @@ def main() -> int:
     conjuntos = {"Gradient boosting (FIRMS)": variables}
     if "clima" in bloques:
         conjuntos["Gradient boosting (FIRMS + clima)"] = variables + VARIABLES_MODELO_CLIMA
+    if "pronostico" in bloques:
+        conjuntos["Gradient boosting (FIRMS + clima + pronóstico)"] = (variables + VARIABLES_MODELO_CLIMA
+                                                                       + VARIABLES_PRONOSTICO["y24"])
     modelos = {}
     for nombre, cols in conjuntos.items():
         print(f"Entrenando {nombre}...")
@@ -245,7 +281,9 @@ def main() -> int:
     p_prueba = calibradas[elegido]
     # v2: climatología sin fuga de objetivo (cada año de entrenamiento se calcula con los otros años; no se publicó)
     # v3: v2 + 14 variables (de 23) + horizontes de 48 h y 7 días publicados
-    nombre_modelo = "hgb_" + "_".join(b.lower() for b in bloques) + "_v3"
+    # v4: v3 + clima de los días que se predicen (pronóstico de Open-Meteo al publicar), 21-11-2026
+    usa_pronostico = any(c in cols for c in VARIABLES_PRONOSTICO["y24"])
+    nombre_modelo = "hgb_" + "_".join(b.lower() for b in bloques) + ("_v4" if usa_pronostico else "_v3")
     print(f"Elegido (precisión media en calibración): {elegido}")
 
     # Segmentos ignición / propagación
@@ -279,7 +317,9 @@ def main() -> int:
     # 48 h y 7 días con el mismo conjunto de variables, cada uno contra la climatología de su propio horizonte
     print("Entrenando 48 h y 7 días...")
     p_cal_24 = iso.predict(modelo.predict_proba(C[cols])[:, 1])
-    otros = {obj: entrenar_horizonte(tabla, obj, dias, cols, ent, cal, prueba)
+    cols_base = [c for c in cols if c not in VARIABLES_PRONOSTICO["y24"]]
+    otros = {obj: entrenar_horizonte(tabla, obj, dias, cols_base + (VARIABLES_PRONOSTICO[obj] if usa_pronostico else []),
+                                     ent, cal, prueba)
              for obj, (_, dias) in HORIZONTES.items() if obj != "y24"}
     niveles_h = {"y24": NIVELES} | {obj: umbrales_equivalentes(p_cal_24, h["p_cal"]) for obj, h in otros.items()}
     etiqueta = {"y48": "48 h", "y7d": "7 días"}
@@ -322,7 +362,7 @@ def main() -> int:
         if obj == "y24":
             prob_h = hist["prob"]
         else:
-            prob_h = otros[obj]["calibrador"].predict(otros[obj]["modelo"].predict_proba(hist[cols])[:, 1])
+            prob_h = otros[obj]["calibrador"].predict(otros[obj]["modelo"].predict_proba(hist[otros[obj]["cols"]])[:, 1])
         h = hist[["region_id", "fecha", "valido_para"]].assign(prob=prob_h, mes=lambda d: d["valido_para"].dt.month)
         ultimo = h[h["fecha"] == pd.Timestamp(FIN)]
         filas_riesgo.append(pd.DataFrame({
@@ -370,7 +410,9 @@ def main() -> int:
               "ultimo_dato": FIN, "ultimo_dato_suomi_npp": ultimo_snpp.strftime("%Y-%m-%d"),
               "sustitucion_noaa20": bool(fin > ultimo_snpp),
               "clima_hasta": None if clima_hasta is None else clima_hasta.strftime("%Y-%m-%d"),
-              "clima_rezago_dias": int(rezago_clima), "prueba_nueva": prueba_nueva}
+              "clima_rezago_dias": int(rezago_clima), "prueba_nueva": prueba_nueva,
+              "pronostico": info_pron if usa_pronostico else None,
+              "validacion_pronostico": VALIDACION_PRONOSTICO if usa_pronostico else None}
     for obj, (horas, dias) in HORIZONTES.items():
         mp = resultados[elegido] if obj == "y24" else otros[obj]["modelo_prueba"]
         cp = clim24 if obj == "y24" else otros[obj]["clim_prueba"]
@@ -394,7 +436,8 @@ def main() -> int:
             f"de las veces y cubrieron {ap['% del fuego que tuvo alerta']:.0f} % de los días con fuego. Para incendios "
             f"nuevos sus alertas acertaron {ai['% de alertas con fuego']:.0f} % (la tasa base es "
             f"{ai['Tasa base (%)']:.1f} %), pero {100 - ai['% del fuego que tuvo alerta']:.0f} % de los incendios nuevos "
-            "empezó sin alerta: la mayoría de las igniciones son humanas.")
+            "empezó sin alerta: la mayoría de las igniciones son humanas."
+            + (texto_validacion_pronostico(VALIDACION_PRONOSTICO) if usa_pronostico else ""))
     metricas_json = {"modelo": nombre_modelo, "periodo_prueba": "2022-2025", "auc": round(r["auc"], 3),
                      "precision_media": round(r["precision_media"], 3), "captura_top10": round(r["captura_top10"], 3),
                      "nota": nota}
@@ -448,6 +491,14 @@ def main() -> int:
         f"{resultados['Persistencia + climatología']['auc']:.3f}). La regresión logística rinde casi igual "
         f"(AUC {lr_auc:.3f}): la ganancia viene de las variables, no de la complejidad del modelo. Se usa gradient "
         "boosting porque admite nuevos bloques (clima, vegetación) sin rediseñar.",
+        *([f"- **Clima de los días que predice (v4):** el modelo usa la temperatura máxima, la humedad mínima, el "
+           "viento máximo y la lluvia de mañana (y de pasado mañana a 48 h). En esta prueba son las **observadas** "
+           "(NASA POWER): es una cota superior. Al publicar se usa el pronóstico de Open-Meteo, que además rellena los "
+           "~4 días de rezago de NASA POWER; con pronósticos reales archivados"
+           + texto_validacion_pronostico(VALIDACION_PRONOSTICO).replace(" Con el clima observado del día que predice; "
+                                                                        "con el pronóstico real de Open-Meteo", "")
+           + " Detalle: [pronostico_validacion.md](pronostico_validacion.md)."]
+          if usa_pronostico and VALIDACION_PRONOSTICO else []),
         *([f"- **Prueba nueva 2026** ({prueba_nueva['desde']} a {prueba_nueva['hasta']}, datos que no existían al "
             f"elegir el modelo): AUC **{prueba_nueva['modelo']['auc']:.3f}** (climatología "
             f"{prueba_nueva['climatologia']['auc']:.3f}), precisión media {prueba_nueva['modelo']['precision_media']:.3f}."]

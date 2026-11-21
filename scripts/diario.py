@@ -3,7 +3,8 @@
 Pensado para GitHub Actions (repo de datos, .github/workflows/actualizar.yml), pero corre igual en local. No publica:
 eso lo hace después scripts/10_publicar.py, solo si este script termina sin errores.
 
-- Cada día: FIRMS del año (1b) → ingesta (2) → comunas (3) → calidad (4) → clima (5c) y viento (5d) → riesgo (8) →
+- Cada día: FIRMS del año (1b) → ingesta (2) → comunas (3) → calidad (4) → clima (5c), viento (5d) y pronóstico de
+  Open-Meteo (5e; si falla, sigue sin pronóstico) → riesgo (8) →
   sectores (12), modelo B (12c) y alertas (12d) de Valparaíso → exportar (9, 13, 15, 16).
 - Primera vez o caché vacía (carga completa): antes baja lo que falte y arma lo que no cambia a diario: archivo FIRMS
   2000-2025 y comunas (1), serie armonizada (5) y calendario (7), clima 2012-2025 (5b), capas de sectores (11) y
@@ -90,7 +91,7 @@ def pasos(completa: bool) -> list[list[str]]:
         p += [["05_armonizar"], ["07_calendario"]]
     if cargar["clima"]:
         p.append(["05b_clima_diario"])
-    p += [["05c_clima_reciente"], ["05d_viento_power"], ["08_riesgo"]]
+    p += [["05c_clima_reciente"], ["05d_viento_power"], ["05e_pronostico"], ["08_riesgo"]]
     if cargar["capas"]:
         p.append(["11_descargar_capas", "--region", REGION])
     p += [["12_sectores", "--region", REGION], ["12c_modelo_sectores", "--region", REGION, "--prueba"],

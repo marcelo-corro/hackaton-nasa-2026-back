@@ -13,6 +13,9 @@ Decisiones (14-11-2026):
   de más en esa variable (corregido en v2: AUC de prueba 0,837 -> 0,850).
 - v3 (noche del 14-11): 14 de las 23 variables (selección en calibración, ver docs/decisiones.md) y modelos de 48 h
   y 7 días con umbrales de nivel propios. Prueba 24 h: AUC 0,846, precisión media 0,282.
+- v4 (21-11-2026): v3 + clima de los días que se predicen (t+1 a 24 h; t+1 y t+2 a 48 h). Al entrenar y probar, el
+  observado (NASA POWER); al publicar, el pronóstico de Open-Meteo (paso 5e), que además rellena el rezago de POWER.
+  Validado con pronósticos reales en scripts/08b_validar_pronostico.py (docs/pronostico_validacion.md).
 - Se evalúa por separado propagación (comuna con focos en los últimos 3 días) e ignición (sin focos recientes).
 - Para sumar fuentes, se crea un bloque con llave (region_id, fecha) y el script lo agrega a la comparación.
 """

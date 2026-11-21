@@ -48,7 +48,11 @@ def nota_datos(info: dict) -> str:
     if info.get("sustitucion_noaa20"):
         partes.append(f"Suomi NPP tiene datos solo hasta el {info.get('ultimo_dato_suomi_npp')}: los días siguientes "
                       "usan NOAA-20 (mismo instrumento; en 2022-2025 el modelo rindió igual con él).")
-    if info.get("clima_rezago_dias"):
+    pron = info.get("pronostico")
+    if pron:
+        partes.append(f"El clima de NASA POWER llega hasta el {info.get('clima_hasta')}; los días siguientes y los que se "
+                      f"predicen usan el pronóstico de Open-Meteo (hasta el {pron.get('hasta')}).")
+    elif info.get("clima_rezago_dias"):
         partes.append(f"El clima (NASA POWER) llega hasta el {info.get('clima_hasta')}: se usa ese último clima "
                       "(con 3 días de rezago el modelo baja de AUC 0,85 a 0,82).")
     return " ".join(partes)
@@ -196,6 +200,7 @@ def main() -> int:
         "ultimo_dato_focos": info.get("ultimo_dato"), "ultimo_dato_suomi_npp": info.get("ultimo_dato_suomi_npp"),
         "sustitucion_noaa20": info.get("sustitucion_noaa20", False),
         "clima_hasta": info.get("clima_hasta"), "clima_rezago_dias": info.get("clima_rezago_dias", 0),
+        "pronostico": info.get("pronostico"),  # v0.8 aditivo (21-11-2026): Open-Meteo, desde/hasta y emisión
         "prueba_nueva": None if not pn else {"desde": pn["desde"], "hasta": pn["hasta"], "auc": pn["modelo"]["auc"],
                                              "auc_climatologia": pn["climatologia"]["auc"],
                                              "precision_media": pn["modelo"]["precision_media"]},

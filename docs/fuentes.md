@@ -99,6 +99,31 @@ salida `data/interim/viento_diario.parquet`.
   *(Versión leída de la propia respuesta de la API: `header.api` = `POWER Daily API`, `v2.10.3`; fuentes `MERRA2` y
   `POWER`; título `NASA/POWER Source Native Resolution Daily Data`.)*
 
+## 2c. Open-Meteo: pronóstico diario por comuna (insumo del riesgo publicado, desde el 21-11-2026)
+
+NASA POWER sigue siendo el clima de la historia (entrenamiento y pruebas). Open-Meteo rellena los ~4 días que POWER
+todavía no publica y da el clima de los días que se predicen (modelo v4). Medido con sus pronósticos archivados:
+[pronostico_validacion.md](pronostico_validacion.md).
+
+| Campo | Valor |
+|---|---|
+| Qué es | Pronóstico de modelos numéricos (selección automática "best match" de Open-Meteo: ECMWF IFS, GFS, ICON, etc.) |
+| URL diaria | `https://api.open-meteo.com/v1/forecast` (`hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation`, `timezone=America/Santiago`, `wind_speed_unit=ms`, `past_days` desde el último día de POWER, `forecast_days=4`; hasta 50 comunas por petición) |
+| URL de validación | `https://previous-runs-api.open-meteo.com/v1/forecast` (variables `*_previous_day1` y `*_previous_day2`, 2024-01-01 a 2025-12-31, 80 comunas; archivo desde enero de 2024) |
+| Alcance | El mismo punto por comuna que NASA POWER (`puntos_representativos`), 345 comunas |
+| Resumen diario | Temperatura máxima, humedad relativa mínima, viento máximo (m/s) y precipitación del día, en hora de Chile; un día cuenta con >= 20 horas |
+| Código | `src/firecal/ingest/pronostico.py`, `scripts/05e_pronostico.py` (diario) → `data/interim/pronostico_diario.parquet`; `scripts/08b_validar_pronostico.py` (validación) |
+| Consultado | 2026-11-21 |
+| Licencia | Datos bajo **CC BY 4.0**; plan gratis para uso no comercial (sitios sin fines de lucro, sin suscripciones ni publicidad), < 10 000 llamadas al día. Pide un enlace visible: "Weather data by Open-Meteo.com" → https://open-meteo.com/ |
+
+**Diferencias con NASA POWER** (mismas comunas y días de 2024-2025): Open-Meteo da ~1,6 °C menos de temperatura máxima,
+~7 puntos más de humedad mínima (la de POWER es aproximada) y más lluvia. El modelo entrenado con POWER rindió casi igual
+con Open-Meteo, así que no se corrigen sesgos. Si Open-Meteo falla, el paso 5e no detiene la actualización y el riesgo
+se calcula como antes (último clima de POWER repetido, modelos sin pronóstico).
+
+**Cita que pide Open-Meteo:** Zippenfenig, P. (2023). Open-Meteo.com Weather API [Computer software]. Zenodo.
+https://doi.org/10.5281/ZENODO.7970649
+
 ## 3. Biblioteca del Congreso Nacional (BCN): límites comunales
 
 | Campo | Valor |

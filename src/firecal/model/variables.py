@@ -41,6 +41,14 @@ VARIABLES_CLIMA = ["tmax", "hrmin", "viento_max", "precip", "precip_7d", "dias_s
 # Las otras columnas se siguen calculando: las usan las líneas base, la regresión logística y el backtest.
 VARIABLES_MODELO_FIRMS = ["frp_hoy", "n_7d", "n_30d", "dias_desde_ultimo", "mes", "lat", "lon"]
 VARIABLES_MODELO_CLIMA = ["tmax", "hrmin", "viento_max", "precip", "precip_7d"]
+# Clima de los días que se predicen (v4, 21-11-2026): al entrenar, el observado (NASA POWER); al publicar, el
+# pronóstico de Open-Meteo. A 24 h el día t+1; a 48 h los días t+1 y t+2 (máximo, mínimo o suma). A 7 días no se usa:
+# con el clima real de la semana siguiente la ventaja sobre la climatología solo sube de ×1,09 a ×1,14.
+VARIABLES_PRONOSTICO = {
+    "y24": ["tmax_f1", "hrmin_f1", "viento_f1", "precip_f1"],
+    "y48": ["tmax_f2", "hrmin_f2", "viento_f2", "precip_f2"],
+    "y7d": [],
+}
 
 
 def completar_con_noaa20(focos: pd.DataFrame) -> tuple[pd.DataFrame, pd.Timestamp]:
@@ -204,18 +212,62 @@ def agregar_climatologia(tabla: pd.DataFrame, filas_entrenamiento: pd.Series) ->
     return out
 
 
-def bloque_clima(ruta: Path) -> pd.DataFrame | None:
+def bloque_clima(ruta: Path, pronostico: pd.DataFrame | None = None) -> pd.DataFrame | None:
     """Clima diario por comuna (tarea B5). None si todavía no existe.
 
     Espera `region_id, fecha_local, tmax, hrmin, viento_max, precip` y deriva lluvia de 7 días y días sin llover.
+    Con `pronostico` (firecal.ingest.pronostico: region_id, fecha, tmax, hrmin, viento_max, precip), le suma a cada
+    comuna los días posteriores a su último día de NASA POWER: el relleno del rezago y los días que vienen.
     """
     if not Path(ruta).exists():
         return None
-    c = pd.read_parquet(ruta).rename(columns={"fecha_local": "fecha"}).sort_values(["region_id", "fecha"])
+    c = pd.read_parquet(ruta).rename(columns={"fecha_local": "fecha"})
     c["region_id"] = c["region_id"].astype("string")
+    if pronostico is not None and not pronostico.empty:
+        c = combinar_con_pronostico(c, pronostico)
+    return derivar_clima(c)
+
+
+def combinar_con_pronostico(power: pd.DataFrame, pronostico: pd.DataFrame) -> pd.DataFrame:
+    """NASA POWER más, por comuna, los días del pronóstico posteriores a su último día de POWER (marca `pronostico`)."""
+    p = pronostico.copy()
+    p["region_id"] = p["region_id"].astype("string")
+    p["fecha"] = pd.to_datetime(p["fecha"]).dt.normalize()
+    ultimo = power.groupby("region_id")["fecha"].max().rename("ultimo_power")
+    p = p.join(ultimo, on="region_id")
+    p = p[p["ultimo_power"].isna() | (p["fecha"] > p["ultimo_power"])].drop(columns="ultimo_power")
+    cols = ["region_id", "fecha", "tmax", "hrmin", "viento_max", "precip"]
+    return pd.concat([power.assign(pronostico=False), p[cols].assign(pronostico=True)], ignore_index=True)
+
+
+def derivar_clima(c: pd.DataFrame) -> pd.DataFrame:
+    """Agrega lluvia de 7 días y días sin llover; devuelve las columnas de VARIABLES_CLIMA (y `pronostico` si está)."""
+    c = c.sort_values(["region_id", "fecha"]).reset_index(drop=True)
     g = c.groupby("region_id")["precip"]
     c["precip_7d"] = g.transform(lambda s: s.rolling(7, min_periods=1).sum())
     llueve = (c["precip"] >= 1.0).astype(int)
     racha = llueve.groupby(c["region_id"]).transform(lambda s: s.eq(0).groupby(s.ne(0).cumsum()).cumsum())
     c["dias_sin_lluvia"] = racha.clip(upper=120)
-    return c[["region_id", "fecha", *VARIABLES_CLIMA]].astype({v: "float32" for v in VARIABLES_CLIMA})
+    extra = ["pronostico"] if "pronostico" in c else []
+    return c[["region_id", "fecha", *VARIABLES_CLIMA, *extra]].astype({v: "float32" for v in VARIABLES_CLIMA})
+
+
+def variables_futuro(clima: pd.DataFrame) -> pd.DataFrame:
+    """Clima de los días que se predicen, por (region_id, fecha = día t): el de t+1 (`*_f1`) y el de t+1 y t+2
+    (`*_f2`: temperatura y viento máximos, humedad mínima, lluvia sumada). NaN donde falta algún día."""
+    base = clima[["region_id", "fecha", "tmax", "hrmin", "viento_max", "precip"]]
+    d1 = base.assign(fecha=base["fecha"] - pd.Timedelta(days=1)).rename(
+        columns={"tmax": "t1", "hrmin": "h1", "viento_max": "v1", "precip": "p1"})
+    d2 = base.assign(fecha=base["fecha"] - pd.Timedelta(days=2)).rename(
+        columns={"tmax": "t2", "hrmin": "h2", "viento_max": "v2", "precip": "p2"})
+    f = d1.merge(d2, on=["region_id", "fecha"], how="left")
+    salida = pd.DataFrame({
+        "region_id": f["region_id"], "fecha": f["fecha"],
+        "tmax_f1": f["t1"], "hrmin_f1": f["h1"], "viento_f1": f["v1"], "precip_f1": f["p1"],
+        "tmax_f2": np.fmax(f["t1"], f["t2"]).where(f["t2"].notna()),
+        "hrmin_f2": np.fmin(f["h1"], f["h2"]).where(f["h2"].notna()),
+        "viento_f2": np.fmax(f["v1"], f["v2"]).where(f["v2"].notna()),
+        "precip_f2": f["p1"] + f["p2"],
+    })
+    cols = [c for c in salida.columns if c.endswith(("_f1", "_f2"))]
+    return salida.astype({c: "float32" for c in cols})

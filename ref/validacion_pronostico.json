@@ -1,0 +1,87 @@
+{
+  "generado_utc": "2026-11-21T18:17:06Z",
+  "periodo": "2024-2025",
+  "desde": "2024-01-08",
+  "hasta": "2025-12-29",
+  "comunas": 80,
+  "filas": 56880,
+  "fuente": "Weather data by Open-Meteo.com (CC BY 4.0)",
+  "horizontes": {
+    "24": {
+      "climatologia": {
+        "auc": 0.6992,
+        "precision_media": 0.1891,
+        "captura_top10": 0.2919,
+        "tasa_base": 0.0799
+      },
+      "como_antes": {
+        "auc": 0.7174,
+        "precision_media": 0.2478,
+        "captura_top10": 0.3515,
+        "tasa_base": 0.0799
+      },
+      "power_al_dia": {
+        "auc": 0.7719,
+        "precision_media": 0.3081,
+        "captura_top10": 0.4015,
+        "tasa_base": 0.0799
+      },
+      "open_meteo_al_dia": {
+        "auc": 0.7675,
+        "precision_media": 0.2972,
+        "captura_top10": 0.3918,
+        "tasa_base": 0.0799
+      },
+      "con_pronostico": {
+        "auc": 0.7818,
+        "precision_media": 0.3181,
+        "captura_top10": 0.3962,
+        "tasa_base": 0.0799
+      },
+      "pronostico_perfecto": {
+        "auc": 0.7937,
+        "precision_media": 0.3517,
+        "captura_top10": 0.4281,
+        "tasa_base": 0.0799
+      }
+    },
+    "48": {
+      "climatologia": {
+        "auc": 0.6927,
+        "precision_media": 0.2843,
+        "captura_top10": 0.2579,
+        "tasa_base": 0.1355
+      },
+      "como_antes": {
+        "auc": 0.7044,
+        "precision_media": 0.3152,
+        "captura_top10": 0.2881,
+        "tasa_base": 0.1355
+      },
+      "power_al_dia": {
+        "auc": 0.7452,
+        "precision_media": 0.3637,
+        "captura_top10": 0.3255,
+        "tasa_base": 0.1355
+      },
+      "open_meteo_al_dia": {
+        "auc": 0.7434,
+        "precision_media": 0.3577,
+        "captura_top10": 0.3188,
+        "tasa_base": 0.1355
+      },
+      "con_pronostico": {
+        "auc": 0.7585,
+        "precision_media": 0.3888,
+        "captura_top10": 0.33,
+        "tasa_base": 0.1355
+      },
+      "pronostico_perfecto": {
+        "auc": 0.7679,
+        "precision_media": 0.4117,
+        "captura_top10": 0.3508,
+        "tasa_base": 0.1355
+      }
+    }
+  }
+}
