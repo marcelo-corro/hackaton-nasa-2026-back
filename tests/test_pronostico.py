@@ -37,7 +37,10 @@ class _Sesion:
 
     def get(self, url, params, timeout):
         self.pedidos.append(params)
-        return self.respuestas.pop(0)
+        r = self.respuestas.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return r
 
 
 def test_pedir_pronostico_varias_comunas_por_peticion(monkeypatch) -> None:
@@ -50,6 +53,20 @@ def test_pedir_pronostico_varias_comunas_por_peticion(monkeypatch) -> None:
     assert s.pedidos[0]["latitude"] == "-33.0000,-33.0200" and s.pedidos[0]["past_days"] == 5
     assert s.pedidos[0]["wind_speed_unit"] == "ms" and s.pedidos[0]["timezone"] == "America/Santiago"
     assert sorted(p["region_id"].unique()) == ["05101", "05109"] and len(p) == 4
+
+
+def test_pedir_pronostico_reintenta_cortes_de_red(monkeypatch) -> None:
+    import requests
+
+    monkeypatch.setattr(pr.time, "sleep", lambda s: None)
+    horario = _horario(2).to_dict(orient="list")
+    puntos = pd.DataFrame({"region_id": ["05101"], "lat": [-33.0], "lon": [-71.6]})
+    s = _Sesion([requests.ReadTimeout("sin respuesta"), requests.ConnectionError("caída"), _Resp([{"hourly": horario}])])
+    p = pr.pedir_pronostico(puntos, sesion=s)
+    assert len(s.pedidos) == 3 and len(p) == 2
+    # si no responde en ningún intento, falla (y el paso 5e sigue sin pronóstico)
+    with pytest.raises(RuntimeError, match="no respondió"):
+        pr.pedir_pronostico(puntos, sesion=_Sesion([requests.ReadTimeout("x")] * 4), reintentos=3)
 
 
 def test_pedir_pronostico_falla_con_error_no_reintentable(monkeypatch) -> None:

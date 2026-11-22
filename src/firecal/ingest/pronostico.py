@@ -23,6 +23,7 @@ URL = "https://api.open-meteo.com/v1/forecast"
 VARIABLES_HORARIAS = ["temperature_2m", "relative_humidity_2m", "wind_speed_10m", "precipitation"]
 MIN_HORAS = 20
 LOTE = 50  # comunas por petición (Open-Meteo acepta varias coordenadas separadas por coma)
+TIMEOUT_S = 60  # una petición normal tarda 1-2 s
 ATRIBUCION = "Weather data by Open-Meteo.com (CC BY 4.0)"
 
 
@@ -38,7 +39,11 @@ def horario_a_diario(horario: pd.DataFrame) -> pd.DataFrame:
 def pedir_pronostico(puntos: pd.DataFrame, dias_atras: int = 7, dias_adelante: int = 4,
                      sesion: requests.Session | None = None, reintentos: int = 3) -> pd.DataFrame:
     """Clima diario de Open-Meteo para cada punto (region_id, lat, lon): los últimos `dias_atras` días y hoy más los
-    `dias_adelante - 1` siguientes. Lanza una excepción si una petición falla tras los reintentos."""
+    `dias_adelante - 1` siguientes. Lanza una excepción si una petición falla tras los reintentos.
+
+    Reintenta las respuestas 429 y 5xx y también los cortes de red (sin respuesta en TIMEOUT_S segundos o conexión
+    caída): el 22-11-2026 una petición quedó sin respuesta 90 s y el riesgo salió sin pronóstico ese día. Si Open-Meteo
+    no responde nada, falla en ~4,5 minutos (4 intentos) y el paso 5e sigue sin pronóstico."""
     s = sesion or requests.Session()
     partes = []
     for i in range(0, len(puntos), LOTE):
@@ -48,7 +53,14 @@ def pedir_pronostico(puntos: pd.DataFrame, dias_atras: int = 7, dias_adelante: i
                   "hourly": ",".join(VARIABLES_HORARIAS), "timezone": "America/Santiago", "wind_speed_unit": "ms",
                   "past_days": dias_atras, "forecast_days": dias_adelante}
         for intento in range(reintentos + 1):
-            r = s.get(URL, params=params, timeout=90)
+            try:
+                r = s.get(URL, params=params, timeout=TIMEOUT_S)
+            except (requests.Timeout, requests.ConnectionError) as e:
+                if intento == reintentos:
+                    raise RuntimeError(f"Open-Meteo no respondió tras {reintentos + 1} intentos: {e}") from e
+                print(f"  Open-Meteo sin respuesta (intento {intento + 1}): {type(e).__name__}; se reintenta", flush=True)
+                time.sleep(5 * (intento + 1))
+                continue
             if r.status_code == 200:
                 break
             if intento == reintentos or r.status_code not in (429, 500, 502, 503, 504):
