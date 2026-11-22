@@ -4,6 +4,11 @@ Qué hay en cada sector de 1 km de las 36 comunas continentales de la Región de
 **no** se afirma. Scripts: `11_descargar_capas.py` → `12_sectores.py` → `12b_validar_sectores.py` →
 `13_exportar_sectores.py` (después de `09_exportar.py`). Código en `src/firecal/sectores/`.
 
+Lo que no cambia a diario se calcula una vez y se guarda con una huella: los atributos fijos de cada sector (grilla y
+capas, `firecal.sectores.fijo`) y el modelo B entrenado (sección 6). Cada día solo se rehacen el historial de focos y la
+predicción. Se publican en el formato compacto del contrato v0.9 (`sectores/fijo` y `sectores/dia`); ver
+[decisiones.md](decisiones.md) (22-11-2026).
+
 ## Resumen
 - **Riesgo con probabilidad: por comuna** (modelo validado, `docs/riesgo.md`), a 24 h, 48 h y 7 días.
 - **Sectores: descriptivos.** 17.953 sectores (celdas de 1 km recortadas a la comuna, 15.960 km²) con historial de

@@ -2,6 +2,24 @@
 
 Registro corto de qué se decidió, cuándo y por qué. Lo nuevo va arriba.
 
+## 2026-11-22: sectores compactos y sin recalcular lo fijo cada día (paso previo a más regiones)
+
+- **Problema:** llevar los sectores de 1 km de Valparaíso (17.953) a más regiones. De la RM a la Araucanía hay
+  ~165.000 sectores con el 92 % de los focos y el 93 % de los incendios grandes de 2012-2025; en el formato de hoy
+  (GeoJSON, ~770 bytes por sector) serían ~130 MB reescritos cada día. Además, cada día se resumían de nuevo las capas
+  (43 s en Actions) y se reentrenaba el modelo B (70 s) con datos que no cambian: entrena con 2012-2019, calibra con
+  2020-2021 y se valida con 2022-2025, así que el modelo salía idéntico.
+- **Adoptado** (medido en Valparaíso, salidas idénticas a las anteriores, sector por sector):
+  - Atributos fijos (grilla y capas) guardados con una huella de las comunas y la versión del cálculo
+    (`firecal.sectores.fijo`); se rehacen solo si cambian o al volver a bajar las capas. `12_sectores`: 42 s → 3 s.
+  - Modelo B guardado (`modelo_b_<región>.joblib`, no se versiona) con la huella de sus datos de entrenamiento; cada día
+    solo predice. `12c_modelo_sectores`: 54 s → 2 s.
+  - Contrato v0.9: cada comuna en dos archivos en columnas, uno fijo (1,7 MB en toda la región, casi todo polígonos de
+    los sectores de borde) y uno diario (0,8 MB; 0,1 MB comprimido); antes 15 MB diarios. El front dibuja los cuadrados
+    desde los índices de la grilla, con la misma proyección y cambio de datum que usa PROJ.
+- **Pendiente para la fase de Actions:** `12d_validar_alertas` también repite cada día una simulación 2020-2025 (36 s);
+  sacar las capas crudas de la caché de Actions; medir cuánto crece el repo de datos con el archivo diario.
+
 ## 2026-11-21: pronóstico del tiempo (Open-Meteo) en el riesgo publicado (modelo v4)
 
 - **Problema:** NASA POWER llega con ~4 días de rezago y no tiene los días que se predicen. Al publicar se repetía el

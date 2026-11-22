@@ -67,7 +67,8 @@ Solo para las comunas de `manifest.sectores.regiones`. Detalle de campos en el c
 - **Selector de horizonte:** 24 h (`riesgo/ultimo.json`), 48 h (`riesgo/48h.json`), 7 días (`riesgo/7d.json`). Si el
   archivo trae `orientativo: true`, mostrar su `nota` junto al mapa. No comparar probabilidades entre horizontes.
 - **Mapa de la comuna:** color de la comuna por `nivel` del horizonte elegido; encima, los sectores
-  (`sectores/{id}.geojson`) y el heatmap de focos (`sectores/{id}_focos.csv`). Capas para elegir: historial
+  (`sectores/{id}.geojson`; desde la v0.9, `sectores/fijo/{id}.json` y `sectores/dia/{id}.json`, ver el contrato) y
+  el heatmap de focos (`sectores/{id}_focos.csv`). Capas para elegir: historial
   (`dias_con_fuego`), interfaz (`pct_interfaz`), pastizal, bosque/matorral, pendiente. En esas capas la leyenda dice
   "historial" o "qué hay en el sector"; la probabilidad por sector viene solo del modelo B (v0.4, más abajo).
 - **Ficha del sector (al hacer clic):** rasgos en texto (`recomendaciones.json → rasgos`), % de cada capa, días con

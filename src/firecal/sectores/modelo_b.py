@@ -12,6 +12,8 @@ Las celdas se identifican por su índice global (ix, iy): el historial de una ce
 
 from __future__ import annotations
 
+import hashlib
+
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
@@ -117,6 +119,22 @@ def tabla_condicional(sectores: pd.DataFrame, focos: pd.DataFrame, xy_focos: np.
     t = pd.concat([estaticas, t.drop(columns="_pos")], axis=1)
     t["fecha"] = ORIGEN + t["dia"].to_numpy().astype("timedelta64[D]")
     return t
+
+
+def huella_entrenamiento(sectores: pd.DataFrame, focos: pd.DataFrame, hasta: pd.Timestamp, extra: str) -> str:
+    """Huella (sha256) de todo lo que determina el entrenamiento y la validación del modelo B hasta `hasta`.
+
+    Las filas de un día d usan solo focos anteriores a d, así que bastan los sectores (identidad, posición y
+    variables fijas, en orden) y los focos hasta `hasta` (sector, comuna, fecha, posición y tamaño del incendio, en
+    orden). `extra` suma lo demás que cambia el resultado (hiperparámetros, períodos, versión de scikit-learn).
+    """
+    h = hashlib.sha256(extra.encode())
+    cols_s = ["sector_id", "region_id", "ix", "iy"] + ESTATICAS
+    h.update(pd.util.hash_pandas_object(pd.DataFrame(sectores[cols_s]), index=False).to_numpy().tobytes())
+    f = focos[focos["fecha_local"] <= hasta]
+    cols_f = ["sector_id", "region_id", "fecha_local", "lat", "lon", "focos_incendio"]
+    h.update(pd.util.hash_pandas_object(pd.DataFrame(f[cols_f]), index=False).to_numpy().tobytes())
+    return h.hexdigest()
 
 
 def captura_top(t: pd.DataFrame, puntaje: np.ndarray, fraccion: float = 0.10, semilla: int = 0) -> float:
