@@ -5,12 +5,16 @@ Funciones puras que devuelven diccionarios o textos; `scripts/13_exportar_sector
 
 from __future__ import annotations
 
+import hashlib
+import json
+
 import numpy as np
 import pandas as pd
 import shapely
 from shapely.geometry import mapping
 
 from firecal.export.contrato import VERSION_CONTRATO
+from firecal.sectores.grilla import CRS_METRICO, LADO_M
 from firecal.sectores.recomendaciones import (
     CONDICIONES, FACTORES_EXPOSICION, FUENTES, RASGOS, RECOMENDACIONES, UMBRAL_BOSQUE, UMBRAL_HISTORIAL_DIAS,
     UMBRAL_INTERFAZ, UMBRAL_PASTIZAL, UMBRAL_PENDIENTE, recomendaciones_clima, recomendaciones_completas,
@@ -18,10 +22,13 @@ from firecal.sectores.recomendaciones import (
 
 TOLERANCIA_SECTORES = 0.0002  # grados (~20 m)
 DECIMALES = 5
+AREA_COMPLETA_KM2 = 1 - 1e-6  # menos que esto (falta más de 1 m²): sector de borde, recortado al límite de la comuna
 ARCHIVOS_SECTORES = {
     "riesgo_48h": "riesgo/48h.json",
     "riesgo_7d": "riesgo/7d.json",
-    "sectores": "sectores/{region_id}.geojson",
+    "sectores": "sectores/{region_id}.geojson",  # hasta la v0.8; se retira cuando el front publicado lea la v0.9
+    "sectores_fijo": "sectores/fijo/{region_id}.json",  # v0.9
+    "sectores_dia": "sectores/dia/{region_id}.json",  # v0.9
     "sectores_focos": "sectores/{region_id}_focos.csv",
     "alertas": "alertas/{codigo_region}.json",
     "recomendaciones": "recomendaciones.json",
@@ -110,6 +117,78 @@ def sectores_geojson(sectores_comuna, niveles: dict[int, str], codigo_region: st
         }})
     return {"type": "FeatureCollection", "contrato": VERSION_CONTRATO, "ejemplo": False,
             "region_id": str(sectores_comuna["region_id"].iloc[0]), "features": feats}
+
+
+def _lista(serie: pd.Series, decimales: int | None = None, factor: float = 1.0) -> list:
+    """Columna → lista JSON (NaN → null; enteros si `decimales` es None)."""
+    out = []
+    for v in serie.to_numpy():
+        if v is None or pd.isna(v):
+            out.append(None)
+        elif decimales is None:
+            out.append(int(v))
+        else:
+            out.append(round(float(v) * factor, decimales))
+    return out
+
+
+def sectores_fijo_json(sectores_comuna, traslacion: list[float]) -> dict:
+    """sectores/fijo/{region_id}.json (v0.9): lo que no cambia a diario, en columnas (un valor por sector).
+
+    Cada sector es la celda (ix0 + dx, iy0 + dy) de la grilla de 1 km en ESRI:102033; el front dibuja el cuadrado con
+    `traslacion` (SAD69 → WGS84 que usa PROJ en la comuna, firecal.sectores.fijo.traslacion_sad69). Los sectores de
+    borde (recortados al límite de la comuna) traen además su polígono y un punto interior, como en el GeoJSON.
+    `version` es una huella del contenido: el archivo diario la repite para no mezclar versiones.
+    """
+    s = sectores_comuna.reset_index(drop=True)
+    ix0, iy0 = int(s["ix"].min()), int(s["iy"].min())
+    borde = (s["area_km2"] < AREA_COMPLETA_KM2).to_numpy()
+    g = s[borde].to_crs("EPSG:4326")
+    geoms = [mapping(shapely.set_precision(x.simplify(TOLERANCIA_SECTORES, preserve_topology=True), 10 ** -DECIMALES))
+             for x in g.geometry]
+    datos = {
+        "contrato": VERSION_CONTRATO, "ejemplo": False, "region_id": str(s["region_id"].iloc[0]), "n": len(s),
+        "grilla": {"crs": CRS_METRICO, "lado_m": LADO_M, "ix0": ix0, "iy0": iy0, "sad69_a_wgs84": traslacion},
+        "dx": (s["ix"] - ix0).astype(int).tolist(), "dy": (s["iy"] - iy0).astype(int).tolist(),
+        "area_km2": _lista(s["area_km2"], 3),
+        "pct_interfaz": _lista(s["frac_wui"], 1, 100), "pct_pastizal": _lista(s["frac_pastizal"], 1, 100),
+        "pct_bosque_matorral": _lista(s["frac_arboles"] + s["frac_matorral"], 1, 100),
+        "pct_cultivo": _lista(s["frac_cultivo"], 1, 100), "pct_construido": _lista(s["frac_construido"], 1, 100),
+        "pendiente_media": _lista(s["pendiente_media"], 1),
+        "bordes": {"i": np.flatnonzero(borde).tolist(), "geometria": geoms,
+                   "punto": [[float(a), float(b)] for a, b in zip(g["lon"], g["lat"])]},
+    }
+    datos["version"] = hashlib.sha256(json.dumps(datos, sort_keys=True).encode()).hexdigest()[:12]
+    return datos
+
+
+def sectores_dia_json(sectores_comuna, niveles: dict[int, str], codigo_region: str, version_fijo: str,
+                      condiciones: list[str] | None = None, fecha_prediccion: str | None = None) -> dict:
+    """sectores/dia/{region_id}.json (v0.9): lo que cambia cada día, en el mismo orden que el archivo fijo.
+
+    Modelo B (null si no hay), historial y rasgos. Los rasgos van como índice a `combinaciones`, que trae cada
+    combinación de rasgos presente con su exposición y sus recomendaciones por horizonte (las mismas del GeoJSON).
+    """
+    s = sectores_comuna.reset_index(drop=True)
+    combos: dict[tuple[str, ...], int] = {}
+    indices = [combos.setdefault(tuple(r), len(combos)) for r in s["rasgos"]]
+    con_b = "prob_condicional" in s.columns
+    nulos = [None] * len(s)
+    return {
+        "contrato": VERSION_CONTRATO, "ejemplo": False, "region_id": str(s["region_id"].iloc[0]), "n": len(s),
+        "version_fijo": version_fijo, "fecha_prediccion": fecha_prediccion,
+        "prob_si_fuego_en_comuna": _lista(s["prob_condicional"], 4) if con_b else nulos,
+        "prob_incendio_grande": _lista(s["prob_grande"], 3) if con_b else nulos,
+        "percentil_en_comuna": _lista(s["percentil_en_comuna"], 1) if con_b else nulos,
+        "dias_con_fuego": _lista(s["dias_con_fuego"]), "focos": _lista(s["focos"]),
+        "ultimo_fuego": [_fecha(x) for x in s["ultimo_fuego"]],
+        "incendios_grandes": _lista(s["incendios_grandes"]), "mayor_incendio_focos": _lista(s["mayor_incendio_focos"]),
+        "rasgos": indices,
+        "combinaciones": [{"rasgos": list(r), "exposicion": int(sum(x in r for x in FACTORES_EXPOSICION)),
+                           "recomendaciones": {str(h): recomendaciones_completas(list(r), n, codigo_region, condiciones)
+                                               for h, n in niveles.items()}}
+                          for r in combos],
+    }
 
 
 def focos_sector_csv(focos: pd.DataFrame) -> str:

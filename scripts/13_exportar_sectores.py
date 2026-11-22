@@ -30,8 +30,9 @@ from firecal.export.comunas import ETIQUETA_CLIMA, fecha_clima_a_mostrar  # noqa
 from firecal.export.contrato import VERSION_CONTRATO  # noqa: E402
 from firecal.export.sectores import (  # noqa: E402
     ARCHIVOS_SECTORES, alertas_region, catalogo_recomendaciones, focos_sector_csv, niveles_por_comuna,
-    resumen_comunas, riesgo_horizonte, sectores_geojson,
+    resumen_comunas, riesgo_horizonte, sectores_dia_json, sectores_fijo_json, sectores_geojson,
 )
+from firecal.sectores.fijo import traslacion_sad69  # noqa: E402
 from firecal.model.variables import bloque_clima  # noqa: E402
 from firecal.sectores.alertas import DIAS_FUEGO_ACTIVO, armar_lista, motivos_comuna  # noqa: E402
 from firecal.sectores.grilla import CRS_METRICO  # noqa: E402
@@ -41,6 +42,9 @@ from firecal.sectores.recomendaciones import (  # noqa: E402
 
 CASO_FECHA = "2024-02-04"  # incendio de Viña del Mar, Quilpué y Villa Alemana, activo desde el 2 de febrero
 INICIO_DATOS = pd.Timestamp("2012-02-01")  # primer día con VIIRS Suomi NPP en la serie
+# GeoJSON por sector (contrato hasta la v0.8): solo durante la transición, para el front ya publicado. Las regiones
+# nuevas salen solo en el formato compacto (sectores/fijo y sectores/dia, v0.9).
+REGIONES_CON_GEOJSON = {"05"}
 
 
 def nota_datos(info: dict) -> str:
@@ -114,10 +118,16 @@ def main() -> int:
     # Sectores y focos por comuna
     ult24 = riesgo[(riesgo["valido_para"] == riesgo["valido_para"].max()) & (riesgo["horizonte_horas"] == 24)]
     prob24 = dict(zip(ult24["region_id"].astype(str), ult24["prob_foco"].astype(float)))
+    fecha_b = modelo_b["prediccion"]["fecha"] if modelo_b else None
     for rid in codigos:
         s = sectores[sectores["region_id"] == rid]
-        _json(publico / ARCHIVOS_SECTORES["sectores"].format(region_id=rid),
-              sectores_geojson(s, niveles.get(rid, {}), args.region, cond_map.get(rid, []), prob24.get(rid)))
+        if args.region in REGIONES_CON_GEOJSON:
+            _json(publico / ARCHIVOS_SECTORES["sectores"].format(region_id=rid),
+                  sectores_geojson(s, niveles.get(rid, {}), args.region, cond_map.get(rid, []), prob24.get(rid)))
+        fijo = sectores_fijo_json(s, traslacion_sad69(float(s["lon"].median()), float(s["lat"].median())))
+        _json(publico / ARCHIVOS_SECTORES["sectores_fijo"].format(region_id=rid), fijo)
+        _json(publico / ARCHIVOS_SECTORES["sectores_dia"].format(region_id=rid),
+              sectores_dia_json(s, niveles.get(rid, {}), args.region, fijo["version"], cond_map.get(rid, []), fecha_b))
         f = focos[focos["region_id"].astype(str) == rid]
         ruta = publico / ARCHIVOS_SECTORES["sectores_focos"].format(region_id=rid)
         ruta.write_text(focos_sector_csv(f), encoding="utf-8")
@@ -197,8 +207,15 @@ def main() -> int:
     # Manifest: rutas nuevas y lista de comunas con sectores
     m = json.loads(ruta_manifest.read_text(encoding="utf-8"))
     m["contrato"] = VERSION_CONTRATO
-    m["archivos"].update(ARCHIVOS_SECTORES)
-    m["sectores"] = {"codigo_region": args.region, "regiones": codigos}
+    archivos = dict(ARCHIVOS_SECTORES)
+    if not REGIONES_CON_GEOJSON:
+        archivos.pop("sectores")
+    m["archivos"].update(archivos)
+    # Varias regiones: 13 corre una vez por región y va sumando (09_exportar rehace el manifest cada día)
+    previo = m.get("sectores") or {}
+    m["sectores"] = {**previo, "codigo_region": previo.get("codigo_region", args.region),
+                     "codigos_region": sorted(set(previo.get("codigos_region", [])) | {args.region}),
+                     "regiones": sorted(set(previo.get("regiones", [])) | set(codigos))}
     pn = info.get("prueba_nueva")
     m["datos"] = {  # v0.6: de qué fecha es cada fuente, para mostrarlo en el front
         "valido_para": pd.Timestamp(ultimo["valido_para"].max()).strftime("%Y-%m-%d"),
@@ -228,8 +245,12 @@ def main() -> int:
         }
     ruta_manifest.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    tam = sum(p.stat().st_size for d in ("sectores", "alertas") for p in (publico / d).glob("*")) / 1e6
-    print(f"Sectores: {len(codigos)} comunas, {len(sectores):,} sectores; {tam:.1f} MB en sectores/ y alertas/")
+    def mb(patron: str) -> float:
+        return sum(p.stat().st_size for p in publico.glob(patron) if p.is_file()) / 1e6
+
+    print(f"Sectores: {len(codigos)} comunas, {len(sectores):,} sectores; MB: GeoJSON {mb('sectores/*.geojson'):.1f}, "
+          f"compacto fijo {mb('sectores/fijo/*.json'):.2f} + diario {mb('sectores/dia/*.json'):.2f}, "
+          f"focos {mb('sectores/*_focos.csv'):.1f}, alertas {mb('alertas/*'):.1f}")
     for h, d in por_horizonte.items():
         tipos = d.drop_duplicates("region_id")["tipo"].value_counts().to_dict() if len(d) else {}
         print(f"  lista {h} h: {len(d)} sectores en {d['region_id'].nunique() if len(d) else 0} comunas; "

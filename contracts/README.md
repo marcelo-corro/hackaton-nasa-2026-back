@@ -1,8 +1,13 @@
-# Contrato back → front · versión 0.8
+# Contrato back → front · versión 0.9
 
 > Guía para quien hace el front: [docs/guia_front.md](../docs/guia_front.md).
 
 **Cambios**
+- 0.9 (22-11-2026): **aditivo**. Sectores en formato compacto: `sectores/fijo/{region_id}.json` (grilla y capas, no
+  cambia a diario) y `sectores/dia/{region_id}.json` (modelo B, historial y rasgos), en columnas; ~6 veces menos que
+  el GeoJSON, para llevar los sectores a más regiones. El manifest suma `archivos.sectores_fijo`,
+  `archivos.sectores_dia` y `sectores.codigos_region`. `sectores/{region_id}.geojson` sigue saliendo para la Región de
+  Valparaíso durante la transición y **no** existirá para las regiones nuevas. Detalle al final.
 - 0.8 (15-11-2026): **aditivo**. Nuevo `comunas.json` (en `manifest.archivos.comunas`): riesgo, clima del último
   día, motivos y recomendaciones de las **345 comunas** (antes solo las 36 del piloto, dentro de `alertas/05.json`).
   Detalle al final.
@@ -390,3 +395,60 @@ En cada elemento de `comunas[]`:
   Mostrar "Open-Meteo.com" con enlace a https://open-meteo.com/ cuando `pronostico` es true.
 - `fuego_activo` marca toda comuna con algún foco en los 3 días; `avance/activos.json` ubica cada incendio en la comuna
   de su centro, por eso puede haber una comuna con fuego activo sin incendio propio en ese archivo.
+
+---
+
+## v0.9 · Sectores en formato compacto (`sectores/fijo` y `sectores/dia`)
+
+En `manifest.json`:
+
+```json
+"archivos": {"...": "...", "sectores_fijo": "sectores/fijo/{region_id}.json", "sectores_dia": "sectores/dia/{region_id}.json"},
+"sectores": {"codigo_region": "05", "codigos_region": ["05"], "regiones": ["05101", "05109", "..."], "modelo_b": {"...": "..."}}
+```
+
+Si `archivos.sectores_fijo` existe, leer los sectores de una comuna de `sectores.regiones` con estos dos archivos (si
+no, del GeoJSON de la v0.3). Ambos traen **una lista por campo, un valor por sector y en el mismo orden**; el sector `i`
+de un archivo es el `i` del otro. El fijo cambia solo cuando cambia la grilla o las capas; el diario, cada día.
+
+### sectores/fijo/{region_id}.json
+
+```json
+{"contrato": "0.9", "ejemplo": false, "region_id": "05109", "n": 151, "version": "4a3b95f9f2ac",
+ "grilla": {"crs": "ESRI:102033", "lado_m": 1000.0, "ix0": -1037, "iy0": -168, "sad69_a_wgs84": [-64.0, 0.0, -32.0]},
+ "dx": [4, 5, "..."], "dy": [0, 0, "..."],
+ "area_km2": [1.0, 0.412, "..."], "pct_interfaz": [0.0, null, "..."], "pct_pastizal": [...], "pct_bosque_matorral": [...],
+ "pct_cultivo": [...], "pct_construido": [...], "pendiente_media": [...],
+ "bordes": {"i": [1, "..."], "geometria": [{"type": "Polygon", "coordinates": [[[-71.54, -33.10], "..."]]}],
+            "punto": [[-71.54112, -33.10325], "..."]}}
+```
+
+- Sector `i` = celda `(ix0 + dx[i], iy0 + dy[i])` de la grilla de 1 km en `crs` (proyección de Albers de área igual
+  para Sudamérica, sobre el datum SAD69). `sector_id` = `{region_id}_{ix}_{iy}`, como en el GeoJSON.
+- Cuadrado de la celda: esquinas `(ix·lado_m, iy·lado_m)` a `((ix+1)·lado_m, (iy+1)·lado_m)` en metros, pasadas a
+  longitud/latitud con la inversa de Albers (elipsoide `aust_SA`) y la traslación cartesiana `sad69_a_wgs84` (metros
+  x, y, z), que es la que usa PROJ en esa comuna (en Chile cambia por franja de latitud; difieren en ~10 m). Así se
+  obtiene lo mismo que `geopandas.to_crs("EPSG:4326")`. Implementación de referencia: `app/lib/grilla.ts` del front.
+- `bordes`: los sectores recortados al límite de la comuna (les falta más de 1 m²) traen su polígono en WGS84
+  (simplificado a ~20 m, como el GeoJSON) y un punto interior `[lon, lat]`. Para los demás, el punto es el centro de
+  la celda.
+- `version`: huella del contenido. El archivo diario la repite en `version_fijo`: si no calzan, no mezclar.
+- `pct_*` y `pendiente_media` como en el GeoJSON (`null` = sin dato).
+
+### sectores/dia/{region_id}.json
+
+```json
+{"contrato": "0.9", "ejemplo": false, "region_id": "05109", "n": 151, "version_fijo": "4a3b95f9f2ac",
+ "fecha_prediccion": "2026-11-23",
+ "prob_si_fuego_en_comuna": [0.0059, "..."], "prob_incendio_grande": [0.864, "..."], "percentil_en_comuna": [52.6, "..."],
+ "dias_con_fuego": [1, "..."], "focos": [1, "..."], "ultimo_fuego": ["2019-12-13", null, "..."],
+ "incendios_grandes": [1, "..."], "mayor_incendio_focos": [38, "..."],
+ "rasgos": [0, 3, "..."],
+ "combinaciones": [{"rasgos": ["bosque_matorral", "historial"], "exposicion": 2,
+                    "recomendaciones": {"24": ["sin_quemas_05", "sin_colillas"], "48": [...], "168": [...]}}]}
+```
+
+- Mismos campos y significado que en el GeoJSON (v0.3 y v0.4). Sin modelo B, sus tres listas vienen con `null`.
+- `rasgos[i]` es el índice en `combinaciones` (cada combinación de rasgos presente en la comuna, con su `exposicion` y
+  sus recomendaciones por horizonte, que ya suman las del clima de la comuna).
+- No trae `prob_fuego_24h`: es la probabilidad de la comuna a 24 h (`riesgo/ultimo.json`) × `prob_si_fuego_en_comuna`.

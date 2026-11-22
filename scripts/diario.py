@@ -5,7 +5,9 @@ eso lo hace después scripts/10_publicar.py, solo si este script termina sin err
 
 - Cada día: FIRMS del año (1b) → ingesta (2) → comunas (3) → calidad (4) → clima (5c), viento (5d) y pronóstico de
   Open-Meteo (5e; si falla, sigue sin pronóstico) → riesgo (8) →
-  sectores (12), modelo B (12c) y alertas (12d) de Valparaíso → exportar (9, 13, 15, 16).
+  sectores (12), modelo B (12c) y alertas (12d) de Valparaíso → exportar (9, 13, 15, 16). Los atributos fijos de los
+  sectores y el modelo B entrenado se reutilizan mientras no cambien sus datos (huella); cada día solo se rehace el
+  historial de focos y la predicción.
 - Primera vez o caché vacía (carga completa): antes baja lo que falte y arma lo que no cambia a diario: archivo FIRMS
   2000-2025 y comunas (1), serie armonizada (5) y calendario (7), clima 2012-2025 (5b), capas de sectores (11) y
   parámetros de la zona de avance (14). Se detecta solo por los archivos que faltan; --carga-completa la fuerza.
@@ -61,8 +63,11 @@ def falta_clima_historico() -> bool:
 
 
 def faltan_capas() -> bool:
+    """Las capas crudas solo hacen falta para calcular los atributos fijos de los sectores (firecal.sectores.fijo)."""
     capas = config.DATA_DIR / "raw" / "sectores"
-    return not all((capas / d).is_dir() and any((capas / d).iterdir()) for d in ("worldcover", "copernicus_dem", "wui", "osm"))
+    sin_capas = not all((capas / d).is_dir() and any((capas / d).iterdir())
+                        for d in ("worldcover", "copernicus_dem", "wui", "osm"))
+    return sin_capas and not (config.PROCESSED_DIR / f"sectores_{REGION}_fijo.parquet").exists()
 
 
 def falta_avance() -> bool:
@@ -92,10 +97,10 @@ def pasos(completa: bool) -> list[list[str]]:
     if cargar["clima"]:
         p.append(["05b_clima_diario"])
     p += [["05c_clima_reciente"], ["05d_viento_power"], ["05e_pronostico"], ["08_riesgo"]]
-    if cargar["capas"]:
+    if cargar["capas"]:  # con las capas recién bajadas se rehacen los atributos fijos de los sectores
         p.append(["11_descargar_capas", "--region", REGION])
-    p += [["12_sectores", "--region", REGION], ["12c_modelo_sectores", "--region", REGION, "--prueba"],
-          ["12d_validar_alertas", "--region", REGION]]
+    p += [["12_sectores", "--region", REGION] + (["--rehacer-fijo"] if cargar["capas"] else []),
+          ["12c_modelo_sectores", "--region", REGION, "--prueba"], ["12d_validar_alertas", "--region", REGION]]
     if cargar["avance"]:
         p.append(["14_validar_avance"])
     p += [["09_exportar"], ["13_exportar_sectores", "--region", REGION], ["15_exportar_avance"], ["16_exportar_comunas"]]

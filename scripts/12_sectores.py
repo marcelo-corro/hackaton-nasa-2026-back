@@ -1,7 +1,10 @@
 """Paso 12 (sectores, piloto A+): qué hay en cada sector de 1 km de las comunas de una región.
 
-Entradas: data/interim/comunas.parquet, data/interim/focos_calidad.parquet y las capas de data/raw/sectores/
-(paso 11). Salidas (no se versionan):
+Entradas: data/interim/comunas.parquet, data/interim/focos_calidad.parquet y, solo cuando hay que calcular los
+atributos fijos, las capas de data/raw/sectores/ (paso 11). Salidas (no se versionan):
+- data/processed/sectores_<región>_fijo.parquet (+ .json con su huella): grilla y resumen de las capas. No cambian a
+  diario: se calculan si faltan, si cambió su huella (límites de las comunas o versión del cálculo) o con
+  --rehacer-fijo (la carga completa lo pasa al volver a bajar las capas). Ver firecal.sectores.fijo.
 - data/processed/sectores_<región>.parquet: un sector por fila, con geometría (CRS métrico), historial de focos,
   marca de fuente persistente, vegetación, interfaz con viviendas y pendiente.
 - data/processed/sectores_<región>_focos.parquet: los focos de incendio (sin fuentes persistentes) con su sector,
@@ -10,7 +13,8 @@ Entradas: data/interim/comunas.parquet, data/interim/focos_calidad.parquet y las
 Todo es descriptivo: el sector no tiene probabilidad propia (ver docs/sectores.md).
 
 Uso:
-    python scripts/12_sectores.py              # región 05 (Valparaíso)
+    python scripts/12_sectores.py                    # región 05 (Valparaíso)
+    python scripts/12_sectores.py --rehacer-fijo     # recalcula también los atributos fijos (necesita las capas)
 """
 
 from __future__ import annotations
@@ -20,17 +24,16 @@ import sys
 import time
 from pathlib import Path
 
+import geopandas as gpd
 import pandas as pd
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "src"))
 from firecal import config  # noqa: E402
-from firecal.sectores.capas import (  # noqa: E402
-    CLASES_WORLDCOVER, CLASES_WUI, MAX_SIN_DATO_WUI, resumen_categorico, resumen_pendiente,
-)
 from firecal.model.variables import completar_con_noaa20  # noqa: E402
-from firecal.sectores.caminos import distancia_urbano, leer_caminos, variables_caminos  # noqa: E402
-from firecal.sectores.grilla import grilla_sectores  # noqa: E402
+from firecal.sectores.fijo import (  # noqa: E402
+    COLUMNAS_GRILLA, calcular_fijo, guardar_fijo, huella_fijo, leer_fijo,
+)
 from firecal.sectores.historial import (  # noqa: E402
     asignar_sector, focos_con_evento, fuentes_persistentes, historial_por_sector,
 )
@@ -42,11 +45,21 @@ CAPAS = RAIZ / "data" / "raw" / "sectores"
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--region", default="05")
+    parser.add_argument("--rehacer-fijo", action="store_true", help="recalcula la grilla y el resumen de las capas")
     args = parser.parse_args()
     t0 = time.time()
 
     comunas = comunas_region(args.region)
-    sectores = grilla_sectores(comunas)
+    huella = huella_fijo(comunas)
+    fijo = None if args.rehacer_fijo else leer_fijo(args.region, huella)
+    if fijo is None:
+        print(f"Atributos fijos de la región {args.region}: se calculan "
+              f"({'pedido con --rehacer-fijo' if args.rehacer_fijo else 'faltan o cambió su huella'})", flush=True)
+        fijo = calcular_fijo(comunas, CAPAS, args.region, avisar=lambda t: print(t, flush=True))
+        guardar_fijo(fijo, args.region, huella)
+    else:
+        print(f"Atributos fijos de la región {args.region}: sin cambios (huella {huella[:12]}), se leen del archivo")
+    sectores = fijo[COLUMNAS_GRILLA]
     print(f"Región {args.region}: {len(comunas)} comunas, {len(sectores):,} sectores de 1 km ({time.time() - t0:.0f} s)")
 
     focos = pd.read_parquet(config.INTERIM_DIR / "focos_calidad.parquet",
@@ -66,26 +79,10 @@ def main() -> int:
                                 on="sector_id", how="left")
     historial["dias_persistente"] = historial["dias_persistente"].fillna(0).astype(int)
 
-    print("Vegetación (WorldCover)...", flush=True)
-    veg = resumen_categorico(sorted((CAPAS / "worldcover").glob("*.tif")), sectores, CLASES_WORLDCOVER)
-    print("Interfaz con viviendas (WUI)...", flush=True)
-    wui = resumen_categorico(sorted((CAPAS / "wui").rglob("WUI.tif")), sectores, CLASES_WUI)
-    print("Pendiente (Copernicus DEM)...", flush=True)
-    pend = resumen_pendiente(sorted((CAPAS / "copernicus_dem").glob("*.tif")), sectores)
-
-    tabla = (sectores.merge(historial, on="sector_id").merge(veg, on="sector_id").merge(wui, on="sector_id")
-             .merge(pend, on="sector_id"))
-    tabla["frac_combustible"] = tabla[["frac_arboles", "frac_matorral", "frac_pastizal"]].sum(axis=1)
-    tabla["dist_urbano_km"] = distancia_urbano(tabla).to_numpy()
-    ruta_caminos = CAPAS / "osm" / f"caminos_{args.region}.json"
-    if ruta_caminos.exists():  # opcional: lo baja `11_descargar_capas.py --solo caminos` (modelo B)
-        print("Caminos (OpenStreetMap)...", flush=True)
-        tabla = tabla.merge(variables_caminos(tabla, leer_caminos(ruta_caminos)), on="sector_id")
-    # WUI: fracciones sobre la parte del sector con dato; vacías si falta más de la mitad
-    con_dato = 1 - tabla["frac_wui_sin_dato"]
-    for c in ["frac_wui_bosque", "frac_wui_pastizal", "frac_no_wui"]:
-        tabla[c] = (tabla[c] / con_dato).where(tabla["frac_wui_sin_dato"] <= MAX_SIN_DATO_WUI)
-    tabla["frac_wui"] = tabla["frac_wui_bosque"] + tabla["frac_wui_pastizal"]
+    # Mismo orden de columnas de siempre: grilla, historial y después lo fijo
+    capas = fijo.drop(columns=[c for c in COLUMNAS_GRILLA if c != "sector_id"])
+    tabla = gpd.GeoDataFrame(sectores.merge(historial, on="sector_id").merge(capas, on="sector_id"),
+                             geometry="geometry", crs=fijo.crs)
     nombres = dict(zip(comunas["region_id"], comunas["nombre"]))
     tabla.insert(2, "comuna", tabla["region_id"].map(nombres))
 
